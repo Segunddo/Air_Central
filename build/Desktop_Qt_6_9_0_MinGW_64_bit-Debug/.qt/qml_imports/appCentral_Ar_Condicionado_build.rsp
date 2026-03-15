@@ -1,0 +1,14 @@
+-rootPath
+C:/Codes/Central_Ar_Condicionado/Central_Ar_Condicionado
+-cmake-output
+-output-file
+C:/Codes/Central_Ar_Condicionado/Central_Ar_Condicionado/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug/.qt/qml_imports/appCentral_Ar_Condicionado_build.cmake
+-importPath
+C:/Codes/Central_Ar_Condicionado/Central_Ar_Condicionado/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug/Central_Ar_Condicionado
+-importPath
+C:/Codes/Central_Ar_Condicionado/Central_Ar_Condicionado/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug
+-importPath
+C:/Qt/6.9.0/mingw_64/qml
+-qrcFiles
+C:/Codes/Central_Ar_Condicionado/Central_Ar_Condicionado/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug/.qt/rcc/qmake_Central_Ar_Condicionado.qrc
+C:/Codes/Central_Ar_Condicionado/Central_Ar_Condicionado/build/Desktop_Qt_6_9_0_MinGW_64_bit-Debug/.qt/rcc/appCentral_Ar_Condicionado_raw_qml_0.qrc

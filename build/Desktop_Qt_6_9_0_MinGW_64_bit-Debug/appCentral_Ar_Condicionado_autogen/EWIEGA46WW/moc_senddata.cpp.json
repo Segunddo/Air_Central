@@ -1,0 +1,57 @@
+{
+    "classes": [
+        {
+            "className": "SendData",
+            "lineNumber": 10,
+            "methods": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "idEsp",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "status",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "temperatura",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 0,
+                    "name": "sendComand",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "idEsp",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "status",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "isCloned": true,
+                    "name": "sendComand",
+                    "returnType": "void"
+                }
+            ],
+            "object": true,
+            "qualifiedClassName": "SendData",
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "senddata.h",
+    "outputRevision": 69
+}

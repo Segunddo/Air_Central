@@ -14,7 +14,7 @@ ApplicationWindow {
         id: modeloLista
         ListElement { name: "Sala: CI 101"; status: "Ligado"; sensorTemp: "27"; targetTemp: "22"}
         ListElement { name: "Sala: CI 201"; status: "Desligado"; sensorTemp: "30"; targetTemp: "24"}
-        ListElement { name: "Sala: CI 301"; status: "Desligado"; sensorTemp: "25"; targetTemp: "23"}
+        ListElement { name: "Sala: CI 301"; status: "Desligado"; sensorTemp: "25"; targetTemp: "21"}
     }
 
     Connections {

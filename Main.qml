@@ -20,13 +20,12 @@ ApplicationWindow {
     Connections {
         target: receiveData
 
-        function onNewDeviceDetected(idEsp, status, temperature) {
+        function onNewDeviceDetected(idEsp, status) {
             console.log("QML ouviu o sinal! Adicionando: " + idEsp)
 
             modeloLista.append({
                 "name": idEsp,
-                "status": status,
-                "sensorTemp": temperature,
+                "status": "Desligado",
                 "targetTemp": "22" // Coloca um padrão de 22°C quando um novo ESP entra
             })
         }
@@ -81,7 +80,7 @@ ApplicationWindow {
                         console.log("Alterando power de: " + model.name)
                         let novoStatus = (model.status === "Ligado") ? "Desligado" : "Ligado"
 
-                        sendData.sendComand(model.name, novoStatus)
+                        sendData.sendComand(model.name, novoStatus, "-1")
                         model.status = novoStatus
                     }
 
@@ -103,7 +102,7 @@ ApplicationWindow {
 
                             if (tempAtual > 16) {
                                 let novaTemp = tempAtual - 1
-                                sendData.sendComand(model.name, "", novaTemp.toString())
+                                sendData.sendComand(model.name, "-1", novaTemp.toString())
                                 model.targetTemp = novaTemp.toString()
                             }
                         }
@@ -129,30 +128,10 @@ ApplicationWindow {
 
                             if (tempAtual < 30) {
                                 let novaTemp = tempAtual + 1
-                                sendData.sendComand(model.name, "", novaTemp.toString())
+                                sendData.sendComand(model.name, "-1", novaTemp.toString())
                                 model.targetTemp = novaTemp.toString()
                             }
                         }
-                    }
-                }
-
-                // Retorno do Sensor (Fixo à direita)
-                Column {
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.rightMargin: 10
-
-                    Text {
-                        text: "Ambiente"
-                        font.pixelSize: 11
-                        color: "#888888"
-                        horizontalAlignment: Text.AlignHCenter
-                        width: parent.width
-                    }
-                    Text {
-                        text: model.sensorTemp + "°C"
-                        font.pixelSize: 22
-                        font.bold: true
-                        color: "#2196F3"
                     }
                 }
             }

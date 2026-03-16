@@ -15,7 +15,7 @@ public:
     explicit ReceiveData(QObject *parent = nullptr);
 
 signals:
-    void newDeviceDetected(QString idEsp, QString status, QString temperature);
+    void newDeviceDetected(QString idEsp);
 
 private slots:
     void readData();

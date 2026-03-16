@@ -23,15 +23,8 @@ void ReceiveData::readData()
 
         qDebug() << "Recebido do ESP:" << messenger;
 
-        // Aqui dividimos a string na ",". Ex : CI 101,Ligado,30°C
-        QStringList parts = messenger.split(",");
-
-        if(parts.size() == 3) {
-            QString idEsp = parts[0];
-            QString status = parts[1];
-            QString temperature = parts[2];
-
-            emit newDeviceDetected(idEsp, status, temperature);
-        }
+        // Ex : CI 101
+        QString idEsp = messenger;
+        emit newDeviceDetected(idEsp);
     }
 }

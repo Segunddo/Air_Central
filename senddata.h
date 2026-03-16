@@ -13,7 +13,7 @@ class SendData : public QObject
 public:
     explicit SendData(QObject *parent = nullptr);
 
-    Q_INVOKABLE void sendComand(QString idEsp, QString status, QString temperatura = "");
+    Q_INVOKABLE void sendComand(QString idEsp, QString status, QString temperatura);
 
 private:
     QUdpSocket *udpSocket;

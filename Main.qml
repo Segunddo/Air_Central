@@ -20,8 +20,13 @@ ApplicationWindow {
     Connections {
         target: receiveData
 
-        function onNewDeviceDetected(idEsp, status) {
+        function onNewDeviceDetected(idEsp) {
             console.log("QML ouviu o sinal! Adicionando: " + idEsp)
+
+            // Para n repetir
+            for (var i = 0; i < modeloLista.count; i++) {
+                if (modeloLista.get(i).name === idEsp) return;
+            }
 
             modeloLista.append({
                 "name": idEsp,
@@ -33,6 +38,38 @@ ApplicationWindow {
 
     // A Lista
     ListView {
+
+        // Botão refresh
+        header: Item {
+                width: ListView.view.width
+                height: 60
+                z: 2
+
+                Button {
+                    text: "🔄"
+                    font.pixelSize: 22
+                    width: 45
+                    height: 45
+
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    background: Rectangle {
+                        color: parent.down ? "#e0e0e0" : "#ffffff"
+                        border.color: "#cccccc"
+                        radius: 5 // Bordas levemente arredondadas para não ficar um quadrado seco
+                    }
+
+                    onClicked: {
+                        console.log("Limpando lista e buscando dispositivos na rede...")
+                        modeloLista.clear()
+
+                        // Envia o comando de broadcast
+                        sendData.sendComand("ALL", "DISCOVER", "-1")
+                    }
+                }
+            }
+
         id: listaRegistros
         anchors.fill: parent
         anchors.margins: 20

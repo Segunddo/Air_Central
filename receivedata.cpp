@@ -23,8 +23,12 @@ void ReceiveData::readData()
 
         qDebug() << "Recebido do ESP:" << messenger;
 
-        // Ex : CI 101
-        QString idEsp = messenger;
-        emit newDeviceDetected(idEsp);
+        // Pega todos os ID's que receber na lista e separa por "," para adicionar 1 por 1
+        QStringList listaDeIds = messenger.split(",", Qt::SkipEmptyParts);
+        for (int i = 0; i < listaDeIds.size(); i++) {
+            // Ex : CI 101
+            QString idEsp = listaDeIds[i];
+            emit newDeviceDetected(idEsp);
+        }
     }
 }

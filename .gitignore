@@ -1,0 +1,7 @@
+# Ignorar qualquer pasta de build gerada pelo Qt Creator/CMake
+build/
+build-*/
+
+# Ignorar configurações de usuário do Qt Creator
+*.user
+CMakeLists.txt.user

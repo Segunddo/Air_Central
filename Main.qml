@@ -23,7 +23,7 @@ ApplicationWindow {
         function onNewDeviceDetected(idEsp) {
             console.log("QML ouviu o sinal! Adicionando: " + idEsp)
 
-            // Para n repetir
+            // Para n repetir id
             for (var i = 0; i < modeloLista.count; i++) {
                 if (modeloLista.get(i).name === idEsp) return;
             }
@@ -65,7 +65,7 @@ ApplicationWindow {
                         modeloLista.clear()
 
                         // Envia o comando de broadcast
-                        sendData.sendComand("ALL", "DISCOVER", "-1")
+                        sendData.sendComand("ALL", "DISCOVER", "-1", modeloLista.count)
                     }
                 }
             }
@@ -117,7 +117,7 @@ ApplicationWindow {
                         console.log("Alterando power de: " + model.name)
                         let novoStatus = (model.status === "Ligado") ? "Desligado" : "Ligado"
 
-                        sendData.sendComand(model.name, novoStatus, "-1")
+                        sendData.sendComand(model.name, novoStatus, "-1", modeloLista.count)
                         model.status = novoStatus
                     }
 
@@ -139,7 +139,7 @@ ApplicationWindow {
 
                             if (tempAtual > 16) {
                                 let novaTemp = tempAtual - 1
-                                sendData.sendComand(model.name, "-1", novaTemp.toString())
+                                sendData.sendComand(model.name, "-1", novaTemp.toString(), modeloLista.count)
                                 model.targetTemp = novaTemp.toString()
                             }
                         }
@@ -165,7 +165,7 @@ ApplicationWindow {
 
                             if (tempAtual < 30) {
                                 let novaTemp = tempAtual + 1
-                                sendData.sendComand(model.name, "-1", novaTemp.toString())
+                                sendData.sendComand(model.name, "-1", novaTemp.toString(), modeloLista.count)
                                 model.targetTemp = novaTemp.toString()
                             }
                         }

@@ -5,9 +5,9 @@ SendData::SendData(QObject *parent) : QObject(parent)
     udpSocket = new QUdpSocket(this);
 }
 
-void SendData::sendComand(QString idEsp, QString status, QString temperatura)
+void SendData::sendComand(QString idEsp, QString status, QString temperatura, int ttl)
 {
-    QString message = idEsp + "," + status + "," + temperatura;
+    QString message = idEsp + "," + status + "," + temperatura + "," + QString::number(ttl);
     QByteArray datagrama = message.toUtf8();
 
     udpSocket->writeDatagram(datagrama, QHostAddress::Broadcast, 8081);

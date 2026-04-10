@@ -59,10 +59,40 @@ void loop() {
 }
 
 void tratarMensagem(String msg){
+	
+  // Verifica se é a mensagem de requisição de IDs
+  if (msg.startsWith("Require_IDs")) {
+    
+    // Verifica se o ID já está dentro dessa string
+    // Se retornar -1, significa que meu ID ainda NÃO está na lista
+    if (msg.indexOf(myID) == -1) {
+      
+      Serial.println("Recebi pedido de IDs. Adicionando o meu...");
+      
+      // Adiciona o meu ID no final da string separando por vírgula
+      String novaMensagem = msg + "," + myID;
+      
+      Serial.println("Reenviando string atualizada: " + novaMensagem);
+      
+      // Reenvia para a rede (a Central e as outras ESPs vão ouvir)
+      reenviarIds(novaMensagem);
 
+    } else {
+      Serial.println("Meu ID ja esta na lista. Ignorando pacote para evitar loop.");
+    }
+    
+    return; // Encerra a função para não executar o código normal abaixo
+  }
+
+  // Se não for "Require_IDs", o código segue para o fluxo normal (parser com vírgulas)
   int p1 = msg.indexOf(',');
   int p2 = msg.indexOf(',', p1+1);
   int p3 = msg.indexOf(',', p2+1);
+
+  if (p1 == -1 || p2 == -1 || p3 == -1) {
+    Serial.println("Formato de mensagem invalido ou desconhecido.");
+    return;
+  }
 
   String idDestino = msg.substring(0, p1);
   String status = msg.substring(p1+1, p2);
@@ -73,17 +103,13 @@ void tratarMensagem(String msg){
   Serial.println("TTL: " + String(ttl));
 
   if(idDestino == myID){
-
     Serial.println("Comando é para mim!");
     executarComando(status, temp);
-
   } 
   else {
-
     ttl--;
 
     if(ttl > 0){
-
       String novaMensagem =
         idDestino + "," +
         status + "," +
@@ -98,7 +124,6 @@ void tratarMensagem(String msg){
       udp.endPacket();
 
     } else {
-
       Serial.println("TTL chegou a zero. Pacote descartado.");
     }
   }
@@ -120,20 +145,26 @@ void executarComando(String status, String temp){
   Serial.println("Estado atualizado:");
   Serial.println(powerStatus);
   Serial.println(temperaturaAlvo);
-
-  enviarStatusCentral();
 }
 
-void enviarStatusCentral(){
+void enviarIdCentral(){
 
-  String resposta = myID + "," +
-                    (powerStatus ? "Ligado" : "Desligado") + "," +
-                    String(temperaturaAtual);
+  String resposta = myID;
 
   udp.beginPacket(broadcastIP, portaResposta);
   udp.print(resposta);
   udp.endPacket();
 
-  Serial.println("Status enviado:");
+  Serial.println("Id enviado:");
   Serial.println(resposta);
+}
+
+void reenviarIds(String msg){
+
+  udp.beginPacket(broadcastIP, portaRecebimento);
+  udp.print(msg);
+  udp.endPacket();
+
+  Serial.println("Requisição enviada");
+  Serial.println(msg);
 }

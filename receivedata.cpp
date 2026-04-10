@@ -24,11 +24,15 @@ void ReceiveData::readData()
         qDebug() << "Recebido do ESP:" << messenger;
 
         // Pega todos os ID's que receber na lista e separa por "," para adicionar 1 por 1
-        QStringList listaDeIds = messenger.split(",", Qt::SkipEmptyParts);
-        for (int i = 0; i < listaDeIds.size(); i++) {
-            // Ex : CI 101
-            QString idEsp = listaDeIds[i];
-            emit newDeviceDetected(idEsp);
+        if (messenger.startsWith("Require_IDs")) {
+
+            QStringList listaDeIds = messenger.split(",", Qt::SkipEmptyParts);
+
+            // O 'for' começa em '1' para ignorar o "Require_IDs" (que está no índice 0)
+            for (int i = 1; i < listaDeIds.size(); i++) {
+                QString idEsp = listaDeIds[i];
+                emit newDeviceDetected(idEsp);
+            }
         }
     }
 }

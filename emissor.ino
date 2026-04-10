@@ -28,11 +28,8 @@ void loop() {
 
   Serial.println("Enviando RAW...");
 
-  // envia várias vezes pra compensar sinal fraco
-  for (int i = 0; i < 3; i++) {
-    irsend.sendRaw(rawData, 73, 38); // 38 kHz
-    delay(50);
-  }
+  int tamanhoArray = sizeof(rawData) / sizeof(rawData[0]);
+  irsend.sendRaw(rawData, tamanhoArray, 38);
 
   Serial.println("Enviado!");
 

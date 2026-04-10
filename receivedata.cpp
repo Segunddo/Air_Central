@@ -31,18 +31,22 @@ void ReceiveData::readData()
 
         QJsonObject jsonObject = doc.object();
 
+        // Verifica o comando recebido
         QString tipoMensagem = jsonObject["command"].toString();
 
-        if (tipoMensagem == "List_IDs") {
-            // Supondo que a ESP Bridge devolva: {"tipo": "Lista_IDs", "nodes": ["CI101", "CI102"]}
-            QJsonArray listaDeIds = jsonObject["nodes"].toArray();
+        if (tipoMensagem == "Resposta_ID") {
 
-            qDebug() << "Lista de nós Mesh recebida com" << listaDeIds.size() << "dispositivos.";
+            QString idEsp = jsonObject["id"].toString();
+            qDebug() << "Novo ESP descoberto na rede Mesh:" << idEsp;
 
-            for (int i = 0; i < listaDeIds.size(); i++) {
-                QString idEsp = listaDeIds[i].toString();
-                emit newDeviceDetected(idEsp);
-            }
+            emit newDeviceDetected(idEsp);
+        }
+
+        else if (tipoMensagem == "Status_Update") {
+            QString idEsp = jsonObject["id"].toString();
+            QString status = jsonObject["status"].toString();
+            QString temp = jsonObject["temp"].toString();
+            qDebug() << "Atualização: " + idEsp + " " + status + " " + temp;
         }
     }
 }

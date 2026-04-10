@@ -8,7 +8,7 @@ SendData::SendData(QObject *parent) : QObject(parent)
 void SendData::sendCommand(QString idEsp, QString status, QString temperatura)
 {
     QJsonObject jsonCommand;
-    jsonCommand["command"] = ""; // Identificador para a ESP saber do que se trata
+    jsonCommand["command"] = "Dispatch"; // Identificador para a ESP saber do que se trata
     jsonCommand["id"] = idEsp;
     jsonCommand["status"] = status;
     jsonCommand["temp"] = temperatura;

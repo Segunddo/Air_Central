@@ -4,7 +4,11 @@
 
 const uint16_t kRecvPin = D5;  // pino do receptor
 
-IRrecv irrecv(kRecvPin);
+// Aumenta o tamanho do buffer
+const uint16_t kCaptureBufferSize = 1024; 
+const uint8_t kTimeout = 50;
+
+IRrecv irrecv(kRecvPin, kCaptureBufferSize, kTimeout, true);
 decode_results results;
 
 void setup() {

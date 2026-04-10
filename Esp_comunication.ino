@@ -1,170 +1,118 @@
-#include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
+#include "painlessMesh.h"
+#include <ArduinoJson.h>
 
-const char* ssid = ""; //nome da rede do ci
-const char* password = ""; //senha da rede
+// Configurações da Rede Mesh (Todas as ESPs devem ter as mesmas credenciais)
+#define MESH_PREFIX   "CI_Rede" // Nome invisível da malha
+#define MESH_PASSWORD "corredor"     // Senha da malha
+#define MESH_PORT     5555                 // Porta de comunicação
 
-WiFiUDP udp;
+painlessMesh mesh;
 
-const int portaRecebimento = 8081;
-const int portaResposta = 8080;
+// Identificação deste módulo específico
+String myID = "CI101"; 
 
-IPAddress broadcastIP(255,255,255,255);
+// Variáveis de controle
+bool powerStatus = false;
+int temperaturaAtual = 25;
+int temperaturaAlvo = 25;
 
-String myID = "CI101"; //id para cada esp
+// =========================================================================
+// Função que é chamada AUTOMATICAMENTE sempre que um pacote chega na Mesh
+// =========================================================================
+void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
+  
+  Serial.printf("Mensagem recebida do nó %u: %s\n", nodeId_de_quem_enviou, msg.c_str());
 
-// variaveis a serem alteradas
+  JsonDocument docRecebido;
+  DeserializationError erro = deserializeJson(docRecebido, msg);
 
-bool powerStatus;
-int temperaturaAtual;
-int temperaturaAlvo;
-
-void setup() {
-
-  Serial.begin(115200);
-
-  WiFi.begin(ssid, password); //conectando na rede do ci
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("\nWiFi conectado");
-  Serial.println(WiFi.localIP());
-
-  udp.begin(portaRecebimento);
-}
-
-void loop() {
-
-  int packetSize = udp.parsePacket();
-
-  if(packetSize) {
-
-    char packetBuffer[255];
-
-    int len = udp.read(packetBuffer, 255);
-
-    if(len > 0)
-      packetBuffer[len] = 0;
-
-    String mensagem = String(packetBuffer);
-
-    Serial.println("Mensagem recebida:");
-    Serial.println(mensagem);
-
-    tratarMensagem(mensagem);
-  }
-}
-
-void tratarMensagem(String msg){
-	
-  // Verifica se é a mensagem de requisição de IDs
-  if (msg.startsWith("Require_IDs")) {
-    
-    // Verifica se o ID já está dentro dessa string
-    // Se retornar -1, significa que meu ID ainda NÃO está na lista
-    if (msg.indexOf(myID) == -1) {
-      
-      Serial.println("Recebi pedido de IDs. Adicionando o meu...");
-      
-      // Adiciona o meu ID no final da string separando por vírgula
-      String novaMensagem = msg + "," + myID;
-      
-      Serial.println("Reenviando string atualizada: " + novaMensagem);
-      
-      // Reenvia para a rede (a Central e as outras ESPs vão ouvir)
-      reenviarIds(novaMensagem);
-
-    } else {
-      Serial.println("Meu ID ja esta na lista. Ignorando pacote para evitar loop.");
-    }
-    
-    return; // Encerra a função para não executar o código normal abaixo
-  }
-
-  // Se não for "Require_IDs", o código segue para o fluxo normal (parser com vírgulas)
-  int p1 = msg.indexOf(',');
-  int p2 = msg.indexOf(',', p1+1);
-  int p3 = msg.indexOf(',', p2+1);
-
-  if (p1 == -1 || p2 == -1 || p3 == -1) {
-    Serial.println("Formato de mensagem invalido ou desconhecido.");
+  if (erro) {
+    Serial.println("Erro: Mensagem não é um JSON válido.");
     return;
   }
 
-  String idDestino = msg.substring(0, p1);
-  String status = msg.substring(p1+1, p2);
-  String temp = msg.substring(p2+1, p3);
-  int ttl = msg.substring(p3+1).toInt();
+  // Verifica o "comando" da mensagem
+  String command = docRecebido["command"];
 
-  Serial.println("Destino: " + idDestino);
-  Serial.println("TTL: " + String(ttl));
+  // --- TRATANDO A REQUISIÇÃO DE IDs ---
+  if (command == "Require_IDs") {
+    Serial.println("A Central pediu meu ID. Respondendo...");
 
-  if(idDestino == myID){
-    Serial.println("Comando é para mim!");
-    executarComando(status, temp);
-  } 
-  else {
-    ttl--;
+    JsonDocument docResposta;
+    docResposta["command"] = "Resposta_ID";
+    docResposta["id"] = myID;
 
-    if(ttl > 0){
-      String novaMensagem =
-        idDestino + "," +
-        status + "," +
-        temp + "," +
-        String(ttl);
+    String respostaJSON;
+    serializeJson(docResposta, respostaJSON);
 
-      Serial.println("Reenviando pacote:");
-      Serial.println(novaMensagem);
+    mesh.sendSingle(nodeId_de_quem_enviou, respostaJSON);
+  }
 
-      udp.beginPacket(broadcastIP, portaRecebimento);
-      udp.print(novaMensagem);
-      udp.endPacket();
+  // --- TRATANDO COMANDOS (Ligar, Mudar Temperatura, etc) ---
+  else if (command == "Dispatch") {
+    String destino = docRecebido["id"];
 
+    // Só executa se o comando for pra essa ESP
+    if (destino == myID) {
+      Serial.println("Comando recebido para MIM!");
+
+      String status = docRecebido["status"];
+      String temp = docRecebido["temp"];
+
+      // Atualiza o Power Status
+      if (status != "-1") {
+        if (status == "Ligado") {
+          powerStatus = true;
+        } else if (status == "Desligado") {
+          powerStatus = false;
+        }
+      }
+
+      // Atualiza a Temperatura Alvo
+      if (temp != "-1") {
+        temperaturaAlvo = temp.toInt();
+      }
+
+      Serial.println("--- Novo Estado ---");
+      Serial.print("Status: "); Serial.println(powerStatus ? "Ligado" : "Desligado");
+      Serial.print("Temp Alvo: "); Serial.println(temperaturaAlvo);
+      
+      enviarStatusCentral(); 
     } else {
-      Serial.println("TTL chegou a zero. Pacote descartado.");
+      Serial.println("Comando não é pra mim. Ignorando.");
     }
   }
 }
 
-void executarComando(String status, String temp){
+void enviarStatusCentral() {
+  
+  JsonDocument docStatus;
+  
+  docStatus["tipo"] = "Status_Update"; // Identificador para o Qt saber o que é
+  docStatus["id"] = myID;
+  docStatus["status"] = powerStatus ? "Ligado" : "Desligado";
+  docStatus["temp"] = temperaturaAlvo;
 
-  if(status != "-1"){
+  String statusJSON;
+  serializeJson(docStatus, statusJSON);
 
-    if(status == "Ligado")
-      powerStatus = true;
-    else
-      powerStatus = false;
-  }
-
-  if(temp != "-1")
-    temperaturaAlvo = temp.toInt();
-
-  Serial.println("Estado atualizado:");
-  Serial.println(powerStatus);
-  Serial.println(temperaturaAlvo);
+  mesh.sendBroadcast(statusJSON);
+  
+  Serial.println("Status atualizado enviado para a rede:");
+  Serial.println(statusJSON);
 }
 
-void enviarIdCentral(){
+void setup() {
+  Serial.begin(115200);
 
-  String resposta = myID;
+  // Inicia tudo
+  mesh.init(MESH_PREFIX, MESH_PASSWORD, MESH_PORT);
+  
+  mesh.onReceive(&mensagensRecebidas);
 
-  udp.beginPacket(broadcastIP, portaResposta);
-  udp.print(resposta);
-  udp.endPacket();
-
-  Serial.println("Id enviado:");
-  Serial.println(resposta);
+  Serial.println("\nESP iniciada e procurando a rede Mesh...");
 }
 
-void reenviarIds(String msg){
-
-  udp.beginPacket(broadcastIP, portaRecebimento);
-  udp.print(msg);
-  udp.endPacket();
-
-  Serial.println("Requisição enviada");
-  Serial.println(msg);
+void loop() {
+  mesh.update();
 }

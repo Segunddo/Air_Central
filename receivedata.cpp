@@ -19,18 +19,28 @@ void ReceiveData::readData()
 {
     while (udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagrama = udpSocket->receiveDatagram();
-        QString messenger = QString::fromUtf8(datagrama.data());
+        QByteArray dadosRecebidos = datagrama.data();
 
-        qDebug() << "Recebido do ESP:" << messenger;
+        QJsonParseError error;
+        QJsonDocument doc = QJsonDocument::fromJson(dadosRecebidos, &error);
 
-        // Pega todos os ID's que receber na lista e separa por "," para adicionar 1 por 1
-        if (messenger.startsWith("Require_IDs")) {
+        if (doc.isNull() || error.error != QJsonParseError::NoError || !doc.isObject()) {
+            qDebug() << "Dado recebido não é um JSON válido ou está corrompido.";
+            continue;
+        }
 
-            QStringList listaDeIds = messenger.split(",", Qt::SkipEmptyParts);
+        QJsonObject jsonObject = doc.object();
 
-            // O 'for' começa em '1' para ignorar o "Require_IDs" (que está no índice 0)
-            for (int i = 1; i < listaDeIds.size(); i++) {
-                QString idEsp = listaDeIds[i];
+        QString tipoMensagem = jsonObject["command"].toString();
+
+        if (tipoMensagem == "List_IDs") {
+            // Supondo que a ESP Bridge devolva: {"tipo": "Lista_IDs", "nodes": ["CI101", "CI102"]}
+            QJsonArray listaDeIds = jsonObject["nodes"].toArray();
+
+            qDebug() << "Lista de nós Mesh recebida com" << listaDeIds.size() << "dispositivos.";
+
+            for (int i = 0; i < listaDeIds.size(); i++) {
+                QString idEsp = listaDeIds[i].toString();
                 emit newDeviceDetected(idEsp);
             }
         }

@@ -3,7 +3,8 @@
 
 #include <QObject>
 #include <QUdpSocket>
-
+#include <QJsonObject>
+#include <QJsonDocument>
 #include <QNetworkDatagram>
 #include <QDebug>
 
@@ -13,7 +14,7 @@ class SendData : public QObject
 public:
     explicit SendData(QObject *parent = nullptr);
 
-    Q_INVOKABLE void sendComand(QString idEsp, QString status, QString temperatura, int ttl);
+    Q_INVOKABLE void sendCommand(QString idEsp, QString status, QString temperatura);
 
     Q_INVOKABLE void requireEspsId();
 

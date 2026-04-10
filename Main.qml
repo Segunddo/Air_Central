@@ -117,7 +117,7 @@ ApplicationWindow {
                         console.log("Alterando power de: " + model.name)
                         let novoStatus = (model.status === "Ligado") ? "Desligado" : "Ligado"
 
-                        sendData.sendComand(model.name, novoStatus, "-1", modeloLista.count)
+                        sendData.sendComand(model.name, novoStatus, "-1")
                         model.status = novoStatus
                     }
 
@@ -139,7 +139,7 @@ ApplicationWindow {
 
                             if (tempAtual > 16) {
                                 let novaTemp = tempAtual - 1
-                                sendData.sendComand(model.name, "-1", novaTemp.toString(), modeloLista.count)
+                                sendData.sendComand(model.name, "-1", novaTemp.toString())
                                 model.targetTemp = novaTemp.toString()
                             }
                         }
@@ -165,7 +165,7 @@ ApplicationWindow {
 
                             if (tempAtual < 30) {
                                 let novaTemp = tempAtual + 1
-                                sendData.sendComand(model.name, "-1", novaTemp.toString(), modeloLista.count)
+                                sendData.sendComand(model.name, "-1", novaTemp.toString())
                                 model.targetTemp = novaTemp.toString()
                             }
                         }

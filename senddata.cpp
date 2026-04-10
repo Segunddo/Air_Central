@@ -5,20 +5,35 @@ SendData::SendData(QObject *parent) : QObject(parent)
     udpSocket = new QUdpSocket(this);
 }
 
-void SendData::sendComand(QString idEsp, QString status, QString temperatura, int ttl)
+void SendData::sendCommand(QString idEsp, QString status, QString temperatura)
 {
-    QString message = idEsp + "," + status + "," + temperatura + "," + QString::number(ttl);
-    QByteArray datagrama = message.toUtf8();
+    QJsonObject jsonCommand;
+    jsonCommand["command"] = ""; // Identificador para a ESP saber do que se trata
+    jsonCommand["id"] = idEsp;
+    jsonCommand["status"] = status;
+    jsonCommand["temp"] = temperatura;
 
+    // Converte o objeto JSON para um formato que possa ser enviado pela rede
+    QJsonDocument doc(jsonCommand);
+    QByteArray datagrama = doc.toJson(QJsonDocument::Compact);
+
+    // Envia para a ESP Bridge (Pode continuar sendo Broadcast na rede local,
+    // ou o IP fixo da ESP que está fazendo a ponte)
     udpSocket->writeDatagram(datagrama, QHostAddress::Broadcast, 8081);
 
-    qDebug() << "Classe SendData disparou:" << message;
+    qDebug() << "Classe SendData disparou JSON:" << datagrama;
 }
 
 void SendData::requireEspsId()
 {
-    QString message = "Require_IDs";
-    QByteArray datagrama = message.toUtf8();
+    // Apenas pede para a ESP Bridge enviar a lista de nós conhecidos pela Mesh
+    QJsonObject jsonRequest;
+    jsonRequest["command"] = "Require_IDs";
+
+    QJsonDocument doc(jsonRequest);
+    QByteArray datagrama = doc.toJson(QJsonDocument::Compact);
 
     udpSocket->writeDatagram(datagrama, QHostAddress::Broadcast, 8081);
+
+    qDebug() << "Classe SendData requisitou IDs:" << datagrama;
 }

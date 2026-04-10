@@ -65,7 +65,7 @@ ApplicationWindow {
                         modeloLista.clear()
 
                         // Envia o comando de broadcast
-                        sendData.sendComand("ALL", "DISCOVER", "-1", modeloLista.count)
+                        sendData.requireEspsId()
                     }
                 }
             }

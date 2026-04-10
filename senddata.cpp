@@ -14,3 +14,11 @@ void SendData::sendComand(QString idEsp, QString status, QString temperatura, in
 
     qDebug() << "Classe SendData disparou:" << message;
 }
+
+void SendData::requireEspsId()
+{
+    QString message = "Require_IDs";
+    QByteArray datagrama = message.toUtf8();
+
+    udpSocket->writeDatagram(datagrama, QHostAddress::Broadcast, 8081);
+}

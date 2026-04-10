@@ -15,6 +15,8 @@ public:
 
     Q_INVOKABLE void sendComand(QString idEsp, QString status, QString temperatura, int ttl);
 
+    Q_INVOKABLE void requireEspsId();
+
 private:
     QUdpSocket *udpSocket;
     int numPort = 8081;

@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/qt/qml/Central_Ar_Condicionado/">
-    <file alias="Main.qml">C:/Codes/Central_Ar_Condicionado/Central_Ar_Condicionado/Main.qml</file>
-  </qresource>
-</RCC>
-

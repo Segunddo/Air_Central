@@ -1,5 +1,7 @@
 #include "painlessMesh.h"
 #include <ArduinoJson.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
 
 // Configurações da Rede Mesh (Todas as ESPs devem ter as mesmas credenciais)
 #define MESH_PREFIX   "CI_Rede" // Nome invisível da malha
@@ -15,6 +17,21 @@ String myID = "CI101";
 bool powerStatus = false;
 int temperaturaAtual = 25;
 int temperaturaAlvo = 25;
+
+uint16_t rawDataOn[] = {3358, 9854, 464, 1610, 492, 548, 492, 538,
+  492, 538, 492, 1568, 492, 548, 492, 538, 510, 536, 490, 540, 490,
+  538, 492, 540, 490, 548, 490, 540, 490, 546, 486, 538, 492, 546,
+  492, 1576, 486, 546, 492, 550, 488, 540, 490, 1572, 488, 540,
+  488, 542, 488, 1572, 490, 530, 530, 506, 516, 548, 490, 1572, 488};
+
+uint16_t rawDataOff[] = {3112, 9872, 510, 1592, 480, 526, 508, 568,
+ 460, 550, 484, 1594, 482, 546, 492, 554, 484, 546, 514, 1536, 510,
+  1560, 510, 552, 480, 550, 480, 548, 482, 548, 480, 552, 480, 566,
+   462, 544, 490, 546, 484, 548, 482, 552, 478, 566, 462, 1616, 462,
+    554, 478, 1580, 510, 506, 540, 528, 486, 550, 482, 1596, 480};  
+
+const uint16_t IR_SEND_PIN = 4;
+IRsend irsend(IR_SEND_PIN);
 
 // =========================================================================
 // Função que é chamada AUTOMATICAMENTE sempre que um pacote chega na Mesh
@@ -63,8 +80,10 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
       if (status != "-1") {
         if (status == "Ligado") {
           powerStatus = true;
+          ligar();
         } else if (status == "Desligado") {
           powerStatus = false;
+          desligar();
         }
       }
 
@@ -107,7 +126,7 @@ void setup() {
 
   // Inicia tudo
   mesh.init(MESH_PREFIX, MESH_PASSWORD, MESH_PORT);
-  
+  irsend.begin();
   mesh.onReceive(&mensagensRecebidas);
 
   Serial.println("\nESP iniciada e procurando a rede Mesh...");
@@ -116,3 +135,13 @@ void setup() {
 void loop() {
   mesh.update();
 }
+
+void ligar(){
+  irsend.sendRaw(rawDataOn, sizeof(rawDataOn) / sizeof(rawDataOn[0]), 38);
+  Serial.println("Sinal de ligar enviado!\n");
+  }
+
+  void desligar(){
+    irsend.sendRaw(rawDataOff, sizeof(rawDataOff) / sizeof(rawDataOff[0]), 38);
+    Serial.println("Sinal de desligar enviado!\n");  
+  }

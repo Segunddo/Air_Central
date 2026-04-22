@@ -117,8 +117,8 @@ ApplicationWindow {
                         console.log("Alterando power de: " + model.name)
                         let novoStatus = (model.status === "Ligado") ? "Desligado" : "Ligado"
 
-                        sendData.sendComand(model.name, novoStatus, "-1")
-                        model.status = novoStatus
+                        sendData.sendCommand(model.name, novoStatus, "-1")
+                        modeloLista.setProperty(index, "status", novoStatus)
                     }
 
                     palette.buttonText: model.status === "Ligado" ? "#d32f2f" : "#4CAF50"
@@ -139,8 +139,8 @@ ApplicationWindow {
 
                             if (tempAtual > 16) {
                                 let novaTemp = tempAtual - 1
-                                sendData.sendComand(model.name, "-1", novaTemp.toString())
-                                model.targetTemp = novaTemp.toString()
+                                sendData.sendCommand(model.name, "-1", novaTemp.toString())
+                                modeloLista.setProperty(index, "targetTemp", novaTemp.toString())
                             }
                         }
                     }
@@ -165,7 +165,7 @@ ApplicationWindow {
 
                             if (tempAtual < 30) {
                                 let novaTemp = tempAtual + 1
-                                sendData.sendComand(model.name, "-1", novaTemp.toString())
+                                sendData.sendCommand(model.name, "-1", novaTemp.toString())
                                 model.targetTemp = novaTemp.toString()
                             }
                         }

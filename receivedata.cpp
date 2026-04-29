@@ -19,34 +19,12 @@ void ReceiveData::readData()
 {
     while (udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagrama = udpSocket->receiveDatagram();
-        QByteArray dadosRecebidos = datagrama.data();
+        QString messenger = QString::fromUtf8(datagrama.data());
 
-        QJsonParseError error;
-        QJsonDocument doc = QJsonDocument::fromJson(dadosRecebidos, &error);
+        qDebug() << "Recebido do ESP:" << messenger;
 
-        if (doc.isNull() || error.error != QJsonParseError::NoError || !doc.isObject()) {
-            qDebug() << "Dado recebido não é um JSON válido ou está corrompido.";
-            continue;
-        }
-
-        QJsonObject jsonObject = doc.object();
-
-        // Verifica o comando recebido
-        QString tipoMensagem = jsonObject["command"].toString();
-
-        if (tipoMensagem == "Resposta_ID") {
-
-            QString idEsp = jsonObject["id"].toString();
-            qDebug() << "Novo ESP descoberto na rede Mesh:" << idEsp;
-
-            emit newDeviceDetected(idEsp);
-        }
-
-        else if (tipoMensagem == "Status_Update") {
-            QString idEsp = jsonObject["id"].toString();
-            QString status = jsonObject["status"].toString();
-            QString temp = jsonObject["temp"].toString();
-            qDebug() << "Atualização: " + idEsp + " " + status + " " + temp;
-        }
+        // Ex : CI 101
+        QString idEsp = messenger;
+        emit newDeviceDetected(idEsp);
     }
 }

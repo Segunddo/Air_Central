@@ -3,10 +3,7 @@
 
 #include <QObject>
 #include <QUdpSocket>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonParseError>
+
 #include <QNetworkDatagram>
 #include <QDebug>
 

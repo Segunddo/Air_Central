@@ -72,25 +72,26 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
     // Só executa se o comando for pra essa ESP
     if (destino == myID) {
       Serial.println("Comando recebido para MIM!");
-
-      String status = docRecebido["status"];
-      String temp = docRecebido["temp"];
-
-      // Atualiza o Power Status
-      if (status != "-1") {
-        if (status == "Ligado") {
-          powerStatus = true;
-          ligar();
-        } else if (status == "Desligado") {
-          powerStatus = false;
-          desligar();
-        }
-      }
-
-      // Atualiza a Temperatura Alvo
-      if (temp != "-1") {
-        temperaturaAlvo = temp.toInt();
-      }
+	  
+	  if (docRecebido.containsKey("status")) {
+		  String status = docRecebido["status"];
+		  
+		  // Atualiza o Power Status
+		  if (status == "Ligado") {
+			  powerStatus = true;
+			  ligar();
+		  } else if (status == "Desligado") {
+			  powerStatus = false;
+			  desligar();
+          }
+	  }
+	  
+	  if (docRecebido.containsKey("temp")) {
+		  String temp = docRecebido["temp"];
+		  
+		  // Atualiza a Temperatura Alvo
+		  temperaturaAlvo = temp.toInt();
+	  }
 
       Serial.println("--- Novo Estado ---");
       Serial.print("Status: "); Serial.println(powerStatus ? "Ligado" : "Desligado");

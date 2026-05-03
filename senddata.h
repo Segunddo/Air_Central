@@ -14,7 +14,11 @@ class SendData : public QObject
 public:
     explicit SendData(QObject *parent = nullptr);
 
-    Q_INVOKABLE void sendCommand(QString idEsp, QString status, QString temperatura);
+    void send_data(QJsonObject jsonCommand);
+
+    Q_INVOKABLE void send_command_status(QString idEsp, QString status);
+
+    Q_INVOKABLE void send_command_temp(QString idEsp, QString temperatura);
 
     Q_INVOKABLE void requireEspsId();
 

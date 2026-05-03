@@ -31,22 +31,27 @@ void ReceiveData::readData()
 
         QJsonObject jsonObject = doc.object();
 
-        // Verifica o comando recebido
-        QString tipoMensagem = jsonObject["command"].toString();
+        decodeData(jsonObject);
+    }
+}
 
-        if (tipoMensagem == "Resposta_ID") {
+void ReceiveData::decodeData(QJsonObject jsonObject)
+{
+    // Verifica o comando recebido
+    QString messageType = jsonObject["command"].toString();
 
-            QString idEsp = jsonObject["id"].toString();
-            qDebug() << "Novo ESP descoberto na rede Mesh:" << idEsp;
+    if (messageType == "Resposta_ID") {
 
-            emit newDeviceDetected(idEsp);
-        }
+        QString idEsp = jsonObject["id"].toString();
+        qDebug() << "Novo ESP descoberto na rede Mesh:" << idEsp;
 
-        else if (tipoMensagem == "Status_Update") {
-            QString idEsp = jsonObject["id"].toString();
-            QString status = jsonObject["status"].toString();
-            QString temp = jsonObject["temp"].toString();
-            qDebug() << "Atualização: " + idEsp + " " + status + " " + temp;
-        }
+        emit newDeviceDetected(idEsp);
+    }
+
+    else if (messageType == "Status_Update") {
+        QString idEsp = jsonObject["id"].toString();
+        QString status = jsonObject["status"].toString();
+        QString temp = jsonObject["temp"].toString();
+        qDebug() << "Atualização: " + idEsp + " " + status + " " + temp;
     }
 }

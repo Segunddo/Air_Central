@@ -22,6 +22,7 @@ signals:
 
 private slots:
     void readData();
+    void decodeData(QJsonObject obj);
 
 private:
     QUdpSocket *udpSocket;

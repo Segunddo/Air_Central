@@ -108,7 +108,7 @@ void enviarStatusCentral() {
   
   JsonDocument docStatus;
   
-  docStatus["command"] = "Status_Update"; // Identificador para o Qt saber o que é
+  docStatus["command"] = "status_update"; // Identificador para o Qt saber o que é
   docStatus["id"] = myID;
   docStatus["status"] = powerStatus ? "Ligado" : "Desligado";
   docStatus["temp"] = temperaturaAlvo;

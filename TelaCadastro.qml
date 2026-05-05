@@ -60,6 +60,7 @@ Item {
                     id: comboComando
                     model: comandosModel
                     textRole: "text"
+                    valueRole: "value"
                     Layout.fillWidth: true
                     Layout.preferredHeight: 45
                     font.pixelSize: 16
@@ -93,31 +94,6 @@ Item {
                         // Passo 2: Manda a classe SendData disparar o gatilho pra ESP
                         sendData.require_ir_read()
                         console.log("Iniciando processo de gravação para:", comandoEscolhido)
-                    }
-                }
-
-                // Botão de Salvar (Ação Principal)
-                Button {
-                    text: "💾 Salvar Código"
-                    font.bold: true
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 45
-
-                    background: Rectangle {
-                        color: parent.down ? "#388e3c" : "#4CAF50" // Verde
-                        radius: 8
-                    }
-
-                    contentItem: Text {
-                        text: parent.text
-                        font: parent.font
-                        color: "white" // Texto branco pra contrastar com o verde
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: {
-                        console.log("Salvando no JSON...")
                     }
                 }
 

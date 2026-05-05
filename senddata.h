@@ -7,6 +7,8 @@
 #include <QJsonDocument>
 #include <QNetworkDatagram>
 #include <QDebug>
+#include <QJsonArray>
+#include <QFile>
 
 class SendData : public QObject
 {
@@ -25,6 +27,9 @@ public:
     Q_INVOKABLE void require_ir_read();
 
 private:
+
+    QJsonArray get_codes_from_file(const QString& chave);
+
     QUdpSocket *udpSocket;
     int numPort = 8081;
 };

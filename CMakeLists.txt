@@ -9,16 +9,21 @@ find_package(Qt6 REQUIRED COMPONENTS Quick)
 qt_standard_project_setup(REQUIRES 6.8)
 
 qt_add_executable(appCentral_Ar_Condicionado
-    main.cpp
+
 )
 
 qt_add_qml_module(appCentral_Ar_Condicionado
     URI Central_Ar_Condicionado
     VERSION 1.0
     QML_FILES
-        Main.qml
+    TelaLista.qml
         SOURCES receivedata.h receivedata.cpp
         SOURCES senddata.h senddata.cpp
+        SOURCES savedata.h savedata.cpp
+        RESOURCES
+        QML_FILES Main.qml
+        QML_FILES TelaCadastro.qml
+        SOURCES main.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

@@ -12,10 +12,10 @@ ReceiveData::ReceiveData(QObject *parent) : QObject(parent)
     }
 
     connect(udpSocket, &QUdpSocket::readyRead,
-            this, &ReceiveData::readData);
+            this, &ReceiveData::read_data);
 }
 
-void ReceiveData::readData()
+void ReceiveData::read_data()
 {
     while (udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagrama = udpSocket->receiveDatagram();
@@ -31,11 +31,11 @@ void ReceiveData::readData()
 
         QJsonObject jsonObject = doc.object();
 
-        decodeData(jsonObject);
+        decode_data(jsonObject);
     }
 }
 
-void ReceiveData::decodeData(QJsonObject jsonObject)
+void ReceiveData::decode_data(QJsonObject jsonObject)
 {
     // Verifica o comando recebido
     QString messageType = jsonObject["command"].toString();
@@ -48,10 +48,38 @@ void ReceiveData::decodeData(QJsonObject jsonObject)
         emit newDeviceDetected(idEsp);
     }
 
-    else if (messageType == "Status_Update") {
+    else if (messageType == "new_code") {
+        if (waitedCommand.isEmpty()) {
+            qDebug() << "Recebi um código IR, mas não estou em modo de cadastro. Ignorando.";
+            return;
+        }
+
+        QString code = jsonObject["code"].toString();
+
+        // Monta o JSON exato que o SaveData precisa (ex: {"Ligar": "0xFFA2"})
+        QJsonObject novoDado;
+        novoDado[waitedCommand] = code;
+
+        // Salva no arquivo
+        SaveData saveData;
+        saveData.save_data(novoDado);
+
+        // Limpa a variável
+        waitedCommand = "";
+        qDebug() << "Código salvo com sucesso!";
+    }
+
+    else if (messageType == "status_update") {
+
         QString idEsp = jsonObject["id"].toString();
         QString status = jsonObject["status"].toString();
         QString temp = jsonObject["temp"].toString();
         qDebug() << "Atualização: " + idEsp + " " + status + " " + temp;
     }
+}
+
+void ReceiveData::set_waited_command(QString commandType)
+{
+    waitedCommand = commandType;
+    qDebug() << "ReceiveData agora está aguardando um código para:" << waitedCommand;
 }

@@ -22,6 +22,8 @@ public:
 
     Q_INVOKABLE void requireEspsId();
 
+    Q_INVOKABLE void require_ir_read();
+
 private:
     QUdpSocket *udpSocket;
     int numPort = 8081;

@@ -10,6 +10,8 @@
 #include <QNetworkDatagram>
 #include <QDebug>
 
+#include "savedata.h"
+
 class ReceiveData : public QObject
 {
     Q_OBJECT
@@ -17,16 +19,21 @@ class ReceiveData : public QObject
 public:
     explicit ReceiveData(QObject *parent = nullptr);
 
+public slots:
+    void set_waited_command(QString commandType);
+
 signals:
     void newDeviceDetected(QString idEsp);
 
 private slots:
-    void readData();
-    void decodeData(QJsonObject obj);
+    void read_data();
+    void decode_data(QJsonObject obj);
 
 private:
     QUdpSocket *udpSocket;
     int numPort = 8080;
+
+    QString waitedCommand = ""; // Começa vazio
 };
 
 

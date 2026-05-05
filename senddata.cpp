@@ -48,3 +48,12 @@ void SendData::send_data(QJsonObject jsonCommand)
 
     qDebug() << "Classe SendData disparou JSON:" << datagrama;
 }
+
+void SendData::require_ir_read()
+{
+    QJsonObject jsonRequest;
+    jsonRequest["command"] = "Require_IR"; // Nome do comando que sua ESP entende para entrar em modo leitura
+
+    send_data(jsonRequest);
+    qDebug() << "Classe SendData requisitou leitura de infravermelho";
+}

@@ -10,7 +10,7 @@ Item {
     // Modelo teste
     ListModel {
         id: modeloLista
-        ListElement { name: "Sala: CI 101"; status: "Ligado"; sensorTemp: "27"; targetTemp: "22"}
+        ListElement { name: "CI101"; status: "Ligado"; sensorTemp: "27"; targetTemp: "22"}
         ListElement { name: "Sala: CI 201"; status: "Desligado"; sensorTemp: "30"; targetTemp: "24"}
         ListElement { name: "Sala: CI 301"; status: "Desligado"; sensorTemp: "25"; targetTemp: "21"}
     }
@@ -54,8 +54,8 @@ Item {
                     width: 45
                     height: 45
 
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
+                    Layout.preferredWidth: 45
+                    Layout.preferredHeight: 45
 
                     background: Rectangle {
                         color: parent.down ? "#e0e0e0" : "#ffffff"

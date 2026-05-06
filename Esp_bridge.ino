@@ -1,6 +1,7 @@
 #include "painlessMesh.h"
-#include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
+#include <ArduinoJson.h>    
+#include <IRrecv.h>         
+#include <IRutils.h>
 
 #define MESH_PREFIX   "CI_Rede"
 #define MESH_PASSWORD "corredor"
@@ -8,69 +9,90 @@
 
 painlessMesh mesh;
 
-// Configurações do Roteador Wi-Fi
-#define STATION_SSID     "NOME_DO_SEU_WIFI"
-#define STATION_PASSWORD "SENHA_DO_SEU_WIFI"
-
-WiFiUDP udp;
-const int portaRecebimentoUDP = 8081; // Porta onde a Bridge escuta os comandos do Qt
-const int portaEnvioQt = 8080;        // Porta que o seu Qt está escutando (Ajuste se necessário)
-
-IPAddress broadcastIP(255, 255, 255, 255); 
+// === Configurações do IR ===
+const uint16_t kRecvPin = 14; 
+IRrecv irrecv(kRecvPin);
+decode_results results;
+bool modoLeituraIR = false;
 
 // =======================================================================
-// Função: O que fazer quando uma mensagem vem da MESH (ESPs -> Bridge -> Qt)
+// MESH -> QT (Via Cabo)
 // =======================================================================
 void mensagemRecebidaDaMesh(uint32_t from, String &msg) {
-  Serial.printf("MESH -> UDP | Recebido do nó %u: %s\n", from, msg.c_str());
-
-  udp.beginPacket(broadcastIP, portaEnvioQt);
-  udp.print(msg);
-  udp.endPacket();
+  // Envia a string JSON recebida da rede direto para o PC
+  Serial.println(msg); 
 }
 
 // =======================================================================
-// Verifica se chegou alguma coisa do QT (Qt -> Bridge -> ESPs)
+// QT -> MESH ou QT -> BRIDGE (Interceptação)
 // =======================================================================
 void mensagemRecebidaDoQt() {
-  int packetSize = udp.parsePacket();
-  
-  if (packetSize) {
-    char packetBuffer[512];
-    int len = udp.read(packetBuffer, 511);
+  if (Serial.available()) {
     
-    if (len > 0) {
-      packetBuffer[len] = 0;
+    // Lê o JSON até a quebra de linha
+    String mensagemQt = Serial.readStringUntil('\n');
+    mensagemQt.trim();
+
+    if (mensagemQt.length() > 0) {
+      DynamicJsonDocument doc(512);
+      DeserializationError error = deserializeJson(doc, mensagemQt);
+
+      if (!error) {
+        String command = doc["command"].as<String>();
+
+        // Se o comando for para a PRÓPRIA Bridge ler o controle:
+        if (command == "Require_IR") {
+          modoLeituraIR = true;
+          irrecv.enableIRIn(); 
+        } 
+        // Repassa para os outros nós da Mesh
+        else {
+          mesh.sendBroadcast(mensagemQt);
+        }
+      }
     }
+  }
+}
 
-    String mensagemQt = String(packetBuffer);
-    Serial.println("UDP -> MESH | Recebido do Qt: " + mensagemQt);
+// =======================================================================
+// Leitura do Infravermelho
+// =======================================================================
+void checarReceptorIR() {
+  if (modoLeituraIR) {
+    if (irrecv.decode(&results)) {
+      String codigoHex = "0x" + String(results.value, HEX);
+      codigoHex.toUpperCase();
 
-    // Repassa a string JSON recebida para TODA a rede Mesh
-    mesh.sendBroadcast(mensagemQt);
+      // Monta a resposta JSON para o Qt
+      DynamicJsonDocument doc(256);
+      doc["command"] = "new_code";
+      doc["code"] = codigoHex;
+      
+      String respostaJSON;
+      serializeJson(doc, respostaJSON);
+
+      // Envia o JSON do código lido direto para o cabo USB
+      Serial.println(respostaJSON);
+
+      modoLeituraIR = false;
+      irrecv.disableIRIn();
+      irrecv.resume(); 
+    }
   }
 }
 
 void setup() {
   Serial.begin(115200);
 
+  delay(1000); 
+
+  mesh.setDebugMsgTypes(0); 
   mesh.init(MESH_PREFIX, MESH_PASSWORD, MESH_PORT);
-  
   mesh.onReceive(&mensagemRecebidaDaMesh);
-
-  mesh.stationManual(STATION_SSID, STATION_PASSWORD);
-
-  udp.begin(portaRecebimentoUDP);
-
-  Serial.println("\n=================================");
-  Serial.println("ESP BRIDGE INICIADA");
-  Serial.println("Aguardando conexões...");
-  Serial.println("=================================");
 }
 
 void loop() {
-  mesh.update();
-  
-  // Fica veifiando se o Qt enviou algo
-  mensagemRecebidaDoQt();
+  mesh.update();             
+  mensagemRecebidaDoQt();    
+  checarReceptorIR();        
 }

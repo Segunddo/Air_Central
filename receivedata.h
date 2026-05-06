@@ -2,13 +2,12 @@
 #define RECEIVEDATA_H
 
 #include <QObject>
-#include <QUdpSocket>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonParseError>
-#include <QNetworkDatagram>
 #include <QDebug>
+#include <QSerialPort>
 
 #include "savedata.h"
 
@@ -18,6 +17,10 @@ class ReceiveData : public QObject
 
 public:
     explicit ReceiveData(QObject *parent = nullptr);
+
+    QSerialPort* getSerialPort() { return serialPort; }
+
+    Q_INVOKABLE bool conectar(QString nomePorta);
 
 public slots:
     void set_waited_command(QString commandType);
@@ -30,9 +33,8 @@ private slots:
     void decode_data(QJsonObject obj);
 
 private:
-    QUdpSocket *udpSocket;
-    int numPort = 8080;
-
+    QSerialPort *serialPort;
+    QByteArray buffer;
     QString waitedCommand = ""; // Começa vazio
 };
 

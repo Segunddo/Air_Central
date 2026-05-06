@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
 
     // 1. Instanciamos apenas as classes que conversam com a Interface
     ReceiveData receiveData;
-    SendData sendData;
+    SendData sendData(receiveData.getSerialPort());
 
     QQmlApplicationEngine engine;
 

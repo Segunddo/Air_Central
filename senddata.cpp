@@ -1,8 +1,8 @@
 #include "senddata.h"
 
-SendData::SendData(QObject *parent) : QObject(parent)
+SendData::SendData(QSerialPort *portaSerial, QObject *parent)
+    : QObject(parent), serial(portaSerial)
 {
-    udpSocket = new QUdpSocket(this);
 }
 
 void SendData::send_command_status(QString idEsp, QString status)
@@ -58,13 +58,17 @@ void SendData::send_data(QJsonObject jsonCommand)
 {
     // Converte o objeto JSON para um formato que possa ser enviado pela rede
     QJsonDocument doc(jsonCommand);
-    QByteArray datagrama = doc.toJson(QJsonDocument::Compact);
+    QByteArray data = doc.toJson(QJsonDocument::Compact);
 
-    // Envia para a ESP Bridge (Pode continuar sendo Broadcast na rede local,
-    // ou o IP fixo da ESP que está fazendo a ponte)
-    udpSocket->writeDatagram(datagrama, QHostAddress::Broadcast, 8081);
+    data.append('\n');
 
-    qDebug() << "Classe SendData disparou JSON:" << datagrama;
+    // Se a porta estiver aberta e válida, envia os dados!
+    if(serial && serial->isOpen()) {
+        serial->write(data);
+        qDebug() << "Classe SendData disparou:" << data;
+    } else {
+        qDebug() << "Erro: Tentando enviar";
+    }
 }
 
 QJsonArray SendData::get_codes_from_file(const QString& chave)

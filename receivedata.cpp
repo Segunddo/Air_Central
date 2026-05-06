@@ -2,30 +2,51 @@
 
 ReceiveData::ReceiveData(QObject *parent) : QObject(parent)
 {
+    serialPort = new QSerialPort(this);
 
-    udpSocket = new QUdpSocket(this);
-
-    if(udpSocket->bind(QHostAddress::AnyIPv4, numPort)) {
-        qDebug() << "Servidor UDP iniciado. Escutando na porta " + std::to_string(numPort);
-    } else {
-        qDebug() << "Erro ao iniciar servidor UDP!";
-    }
-
-    connect(udpSocket, &QUdpSocket::readyRead,
+    // Conecta o sinal de dados chegando ao nosso slot de leitura
+    connect(serialPort, &QSerialPort::readyRead,
             this, &ReceiveData::read_data);
+}
+
+bool ReceiveData::conectar(QString nomePorta)
+{
+    serialPort->setPortName(nomePorta);
+
+    serialPort->setBaudRate(QSerialPort::Baud115200);
+
+    if (serialPort->open(QIODevice::ReadWrite)) {
+        qDebug() << "Conectado com sucesso na porta:" << nomePorta;
+        return true;
+    } else {
+        qDebug() << "Erro ao iniciar!" << serialPort->errorString();
+        return false;
+    }
 }
 
 void ReceiveData::read_data()
 {
-    while (udpSocket->hasPendingDatagrams()) {
-        QNetworkDatagram datagrama = udpSocket->receiveDatagram();
-        QByteArray dadosRecebidos = datagrama.data();
+    buffer.append(serialPort->readAll());
 
+    while (buffer.contains('\n')) {
+        // Encontra onde está o fim da linha
+        int indexQuebra = buffer.indexOf('\n');
+
+        QByteArray linha = buffer.left(indexQuebra).trimmed();
+
+        buffer.remove(0, indexQuebra + 1);
+
+        // Se a linha for vazia, ignora
+        if (linha.isEmpty()) {
+            continue;
+        }
+
+        // Tenta converter o texto recebido para JSON
         QJsonParseError error;
-        QJsonDocument doc = QJsonDocument::fromJson(dadosRecebidos, &error);
+        QJsonDocument doc = QJsonDocument::fromJson(linha, &error);
 
         if (doc.isNull() || error.error != QJsonParseError::NoError || !doc.isObject()) {
-            qDebug() << "Dado recebido não é um JSON válido ou está corrompido.";
+            qDebug() << "Dado recebido não é um JSON válido ou está corrompido:" << linha;
             continue;
         }
 

@@ -96,8 +96,60 @@ Item {
                         stackView.push("TelaCadastro.qml")
                     }
                 }
+
+                TextField {
+                    id: inputPorta
+                    placeholderText: "Porta (ex: COM3)" // Texto fantasma de dica
+                    font.pixelSize: 15
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 45
+
+                    background: Rectangle {
+                        color: "white"
+                        border.color: inputPorta.activeFocus ? "#007BFF" : "#cccccc" // Fica azul ao clicar
+                        border.width: inputPorta.activeFocus ? 2 : 1
+                        radius: 8
+                    }
+                    leftPadding: 15
+                    rightPadding: 15
+                }
+
+                Button {
+                    text: "🛜 Connectar a Rede"
+                    font.pixelSize: 15
+                    font.bold: true
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 45
+
+                    background: Rectangle {
+                        color: parent.down ? "#e0e0e0" : "white"
+                        border.color: "#cccccc"
+                        radius: 8
+                    }
+
+                    contentItem: Text {
+                            text: parent.text
+                            font: parent.font
+                            color: "#333333"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            // Pega o que o usuário digitou usando o ID da caixa de texto
+                            var porta = inputPorta.text.trim();
+
+                            if (porta === "") {
+                                console.log("Erro: Digite o nome da porta primeiro!");
+                                return;
+                            }
+
+                            console.log("Tentando conectar na porta:", porta);
+                            receiveData.conectar(porta);
+                        }
                 }
             }
+        }
 
         id: listaRegistros
         anchors.fill: parent

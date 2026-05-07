@@ -18,7 +18,6 @@ public:
 
     void send_data(QJsonObject jsonCommand);
 
-
     Q_INVOKABLE void send_command_status(QString idEsp, QString status);
 
     Q_INVOKABLE void send_command_temp(QString idEsp, QString temperatura);
@@ -26,6 +25,9 @@ public:
     Q_INVOKABLE void requireEspsId();
 
     Q_INVOKABLE void require_ir_read();
+
+signals:
+    void errorOccurred(QString errorMessage);
 
 private:
 

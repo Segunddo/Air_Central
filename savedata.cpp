@@ -56,6 +56,10 @@ void SaveData::save_data(QJsonObject &newData)
 
     // Só reescreve o arquivo JSON se houver códigos novos de verdade
     if (foiModificado) {
+        // Adiciona ao buffer para caso deseje apagar dps
+        buffer.push_back(newData);
+        emit buffer_size_changed();
+
         QFile file("codes.json");
         if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QJsonDocument documento(this->data);
@@ -66,4 +70,64 @@ void SaveData::save_data(QJsonObject &newData)
     } else {
         qDebug() << "O código recebido já estava salvo. Arquivo ignorado.";
     }
+}
+
+void SaveData::delete_data()
+{
+    bool foiModificado = false;
+
+    if (buffer.isEmpty()) {
+        qDebug() << "O buffer está vazio, nada para apagar.";
+        return;
+    }
+
+    QJsonObject deleteData = buffer.last();
+
+    for (auto it = deleteData.begin(); it != deleteData.end(); ++it) {
+        QString chave = it.key();
+        QJsonValue codigoParaRemover = it.value();
+
+        QJsonArray arrayAtual = this->data[chave].toArray();
+
+        // Procura a posição do item no QJsonArray
+        for (int i = 0; i < arrayAtual.size(); ++i) {
+            if (arrayAtual.at(i) == codigoParaRemover) {
+
+                // Se encontrou, apaga usando o índice!
+                arrayAtual.removeAt(i);
+
+                // Substitui o array antigo pelo novo array no objeto principal
+                this->data[chave] = arrayAtual;
+
+                foiModificado = true; // Avisa que teremos que salvar no disco
+
+                // Interrompe o loop do array, já que achamos e apagamos o valor
+                break;
+            }
+        }
+    }
+
+    if (foiModificado) {
+        QFile file("codes.json");
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QJsonDocument documento(this->data);
+            file.write(documento.toJson(QJsonDocument::Indented));
+            file.close();
+            qDebug() << "Novo código removido da lista e salvo com sucesso!";
+        } else {
+            qDebug() << "Erro ao salvar o código apagado da lista";
+        }
+    }
+
+    buffer.removeLast();
+    emit buffer_size_changed();
+
+}
+
+void SaveData::delete_all_data()
+{
+    QFile file("codes.json");
+    file.remove();
+    qDebug() << "Arquivo apagado";
+    SaveData();
 }

@@ -8,6 +8,7 @@
 #include <QJsonParseError>
 #include <QDebug>
 #include <QSerialPort>
+#include <qserialportinfo.h>
 
 #include "savedata.h"
 
@@ -21,6 +22,8 @@ public:
     QSerialPort* getSerialPort() { return serialPort; }
 
     Q_INVOKABLE bool conectar(QString nomePorta);
+
+    Q_INVOKABLE QStringList list_ports();
 
 public slots:
     void set_waited_command(QString commandType);
@@ -36,6 +39,8 @@ private:
     QSerialPort *serialPort;
     QByteArray buffer;
     QString waitedCommand = ""; // Começa vazio
+
+    SaveData *saveData;
 };
 
 

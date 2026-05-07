@@ -9,18 +9,42 @@ ReceiveData::ReceiveData(QObject *parent) : QObject(parent)
             this, &ReceiveData::read_data);
 }
 
+QStringList ReceiveData::list_ports() {
+    QStringList nomesDasPortas;
+
+    // Pega a lista de todas as portas disponíveis no sistema
+    const auto portas = QSerialPortInfo::availablePorts();
+
+    nomesDasPortas.append("--");
+    for (const QSerialPortInfo &porta : portas) {
+        nomesDasPortas.append(porta.portName());
+    }
+    return nomesDasPortas;
+}
+
 bool ReceiveData::conectar(QString nomePorta)
 {
-    serialPort->setPortName(nomePorta);
+    // SEGURANÇA: Verifica se o objeto 'serial' existe na memória.
+    if (serialPort == nullptr) {
+        serialPort = new QSerialPort(this);
+    }
 
-    serialPort->setBaudRate(QSerialPort::Baud115200);
-
-    if (serialPort->open(QIODevice::ReadWrite)) {
-        qDebug() << "Conectado com sucesso na porta:" << nomePorta;
-        return true;
-    } else {
-        qDebug() << "Erro ao iniciar!" << serialPort->errorString();
+    if (serialPort->isOpen()) {
+        serialPort->close();
+        qDebug() << "Desconectando da porta";
         return false;
+    } else {
+        serialPort->setPortName(nomePorta);
+
+        serialPort->setBaudRate(QSerialPort::Baud115200);
+
+        if (serialPort->open(QIODevice::ReadWrite)) {
+            qDebug() << "Conectado com sucesso na porta:" << nomePorta;
+            return true;
+        } else {
+            qDebug() << "Erro ao iniciar!" << serialPort->errorString();
+            return false;
+        }
     }
 }
 
@@ -82,8 +106,7 @@ void ReceiveData::decode_data(QJsonObject jsonObject)
         novoDado[waitedCommand] = code;
 
         // Salva no arquivo
-        SaveData saveData;
-        saveData.save_data(novoDado);
+        saveData->save_data(novoDado);
 
         // Limpa a variável
         waitedCommand = "";

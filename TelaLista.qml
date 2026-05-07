@@ -10,9 +10,6 @@ Item {
     // Modelo teste
     ListModel {
         id: modeloLista
-        ListElement { name: "CI101"; status: "Ligado"; sensorTemp: "27"; targetTemp: "22"}
-        ListElement { name: "Sala: CI 201"; status: "Desligado"; sensorTemp: "30"; targetTemp: "24"}
-        ListElement { name: "Sala: CI 301"; status: "Desligado"; sensorTemp: "25"; targetTemp: "21"}
     }
 
     Connections {
@@ -97,24 +94,30 @@ Item {
                     }
                 }
 
-                TextField {
-                    id: inputPorta
-                    placeholderText: "Porta (ex: COM3)" // Texto fantasma de dica
+                ComboBox {
+                    id: comboPorta
+
+                    model: receiveData.list_ports()
+
                     font.pixelSize: 15
                     Layout.fillWidth: true
                     Layout.preferredHeight: 45
 
+                    // Customizando o fundo para manter o estilo do seu TextField
                     background: Rectangle {
                         color: "white"
-                        border.color: inputPorta.activeFocus ? "#007BFF" : "#cccccc" // Fica azul ao clicar
-                        border.width: inputPorta.activeFocus ? 2 : 1
+                        // Fica azul se estiver focado ou com a lista aberta
+                        border.color: comboPorta.activeFocus || comboPorta.popup.visible ? "#007BFF" : "#cccccc"
+                        border.width: comboPorta.activeFocus || comboPorta.popup.visible ? 2 : 1
                         radius: 8
                     }
+
                     leftPadding: 15
                     rightPadding: 15
                 }
 
                 Button {
+                    id: btnConectar
                     text: "🛜 Connectar a Rede"
                     font.pixelSize: 15
                     font.bold: true
@@ -128,6 +131,7 @@ Item {
                     }
 
                     contentItem: Text {
+                            id: textoDoBotao
                             text: parent.text
                             font: parent.font
                             color: "#333333"
@@ -136,16 +140,20 @@ Item {
                         }
 
                         onClicked: {
-                            // Pega o que o usuário digitou usando o ID da caixa de texto
-                            var porta = inputPorta.text.trim();
+                            var porta = comboPorta.currentText.trim();
 
                             if (porta === "") {
                                 console.log("Erro: Digite o nome da porta primeiro!");
                                 return;
                             }
 
-                            console.log("Tentando conectar na porta:", porta);
-                            receiveData.conectar(porta);
+                            if(receiveData.conectar(porta)) {
+                                btnConectar.text = "🛜 Desconectar a Rede";
+                                textoDoBotao.color = "#FF3333";
+                            } else {
+                                btnConectar.text = "🛜 Connectar a Rede";
+                                textoDoBotao.color = "#333333";
+                            }
                         }
                 }
             }
@@ -170,7 +178,7 @@ Item {
                 anchors.margins: 10
                 spacing: 15
 
-                // Coluna de Informações Básicas (Nome e Status)
+                // Coluna de Informações Básicas Nome
                 Column {
                     Layout.fillWidth: true
                     spacing: 2
@@ -180,11 +188,6 @@ Item {
                         font.pixelSize: 16
                         font.bold: true
                         color: "#333333"
-                    }
-                    Text {
-                        text: "Status: " + model.status
-                        font.pixelSize: 13
-                        color: model.status === "Ligado" ? "#4CAF50" : "#F44336"
                     }
                 }
 

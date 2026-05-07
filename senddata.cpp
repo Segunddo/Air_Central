@@ -78,6 +78,7 @@ void SendData::send_data(QJsonObject jsonCommand)
         qDebug() << "Classe SendData disparou:" << data;
     } else {
         qDebug() << "Erro: Tentando enviar";
+        emit errorOccurred("Falha ao enviar: A porta serial não está conectada ou aberta.");
     }
 }
 

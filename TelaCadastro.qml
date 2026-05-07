@@ -5,7 +5,25 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
-    // Um modelo simples para popular o ComboBox
+    property int contagemAtual: 0
+
+    function atualizarContagem() {
+        if (saveData && typeof saveData.get_command_count === "function") {
+            contagemAtual = saveData.get_command_count(comboComando.currentValue)
+        } else {
+            contagemAtual = 0;
+        }
+    }
+
+    // 1. ATUALIZADO: Agora escuta o sinal correto do C++
+    Connections {
+        target: saveData
+
+        function onCodes_size_changed() {
+            atualizarContagem()
+        }
+    }
+
     ListModel {
         id: comandosModel
         ListElement { text: "Ligar"; value: "Ligar" }
@@ -90,6 +108,7 @@ Item {
                     }
                     onClicked: {
                         saveData.delete_all_data();
+                        // O atualizarContagem agora é chamado automaticamente pelo onCodes_size_changed
                         popupApagar.close()
                     }
                 }
@@ -110,7 +129,7 @@ Item {
         background: Rectangle {
             color: "white"
             radius: 12
-            border.color: "#f57c00" // Borda laranja para diferenciar do apagar tudo
+            border.color: "#f57c00"
             border.width: 2
         }
 
@@ -123,12 +142,12 @@ Item {
                 text: "↩️ Desfazer Leitura"
                 font.bold: true
                 font.pixelSize: 18
-                color: "#f57c00" // Laranja
+                color: "#f57c00"
                 Layout.alignment: Qt.AlignHCenter
             }
 
             Text {
-                text: "Deseja apagar apenas o último código gravado no arquivo?"
+                text: "Deseja apagar apenas o último código gravado para " + comboComando.currentText + "?"
                 wrapMode: Text.WordWrap
                 font.pixelSize: 14
                 horizontalAlignment: Text.AlignHCenter
@@ -159,7 +178,8 @@ Item {
                         verticalAlignment: Text.AlignVCenter
                     }
                     onClicked: {
-                        saveData.delete_data()
+                        // 2. ATUALIZADO: Passando o valor atual do combobox
+                        saveData.delete_data(comboComando.currentValue)
                         popupApagarUltimo.close()
                     }
                 }
@@ -167,10 +187,9 @@ Item {
         }
     }
 
-    // Criamos um "Card" branco centralizado para imitar o estilo da lista
     Rectangle {
         width: 450
-        height: 470 // Aumentado para 470 para caber o novo botão sem espremer
+        height: 500
         anchors.centerIn: parent
         color: "white"
         radius: 12
@@ -204,9 +223,46 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 45
                 font.pixelSize: 16
+
+                onCurrentValueChanged: {
+                    atualizarContagem()
+                }
+
+                Component.onCompleted: {
+                    atualizarContagem()
+                }
             }
 
-            // Botão de Ler Código (Ação Secundária)
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: -10
+                spacing: 10
+
+                Text {
+                    text: "Códigos registrados para este comando:"
+                    font.pixelSize: 13
+                    color: "#666666"
+                    Layout.fillWidth: true
+                }
+
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: root.contagemAtual > 0 ? "#4caf50" : "#e0e0e0"
+
+                    Behavior on color { ColorAnimation { duration: 200 } }
+
+                    Text {
+                        text: root.contagemAtual
+                        color: root.contagemAtual > 0 ? "white" : "#666666"
+                        font.bold: true
+                        font.pixelSize: 13
+                        anchors.centerIn: parent
+                    }
+                }
+            }
+
             Button {
                 text: "📡 Ler Código do Controle"
                 font.bold: true
@@ -214,7 +270,7 @@ Item {
                 Layout.preferredHeight: 45
 
                 background: Rectangle {
-                    color: parent.down ? "#d5e4f5" : "#e3f2fd" // Azul clarinho
+                    color: parent.down ? "#d5e4f5" : "#e3f2fd"
                     border.color: "#90caf9"
                     radius: 8
                 }
@@ -229,29 +285,27 @@ Item {
 
                 onClicked: {
                     let comandoEscolhido = comboComando.currentValue
-                    // Passo 1: Avisa a classe ReceiveData o que ela deve esperar
                     receiveData.set_waited_command(comandoEscolhido)
-                    // Passo 2: Manda a classe SendData disparar o gatilho pra ESP
                     sendData.require_ir_read()
                     console.log("Iniciando processo de gravação para:", comandoEscolhido)
                 }
             }
 
-            Item { Layout.fillHeight: true } // Espaçador
+            Item { Layout.fillHeight: true }
 
-            // --- NOVO BOTÃO: APAGAR ÚLTIMO CÓDIGO ---
+            // 3. ATUALIZADO: Agora o botão usa a "contagemAtual" para decidir se pode ser clicado
             Button {
-                text: saveData.bufferSize > 0 ? "↩️ Apagar último código (" + saveData.bufferSize + ")" : "↩️ Apagar último código"
+                text: root.contagemAtual > 0 ? "↩️ Apagar último de " + comboComando.currentText : "↩️ Apagar último código"
                 flat: true
                 Layout.alignment: Qt.AlignHCenter
 
-                enabled: saveData.bufferSize > 0
+                enabled: root.contagemAtual > 0
                 opacity: enabled ? 1.0 : 0.5
 
                 contentItem: Text {
                     text: parent.text
                     font.pixelSize: 13
-                    color: "#f57c00" // Cor Laranja/Âmbar
+                    color: "#f57c00"
                     horizontalAlignment: Text.AlignHCenter
                 }
 
@@ -260,7 +314,6 @@ Item {
                 }
             }
 
-            // --- BOTÃO DISCRETO PARA APAGAR TUDO ---
             Button {
                 text: "🗑️ Apagar todos os códigos"
                 flat: true
@@ -269,19 +322,18 @@ Item {
                 contentItem: Text {
                     text: parent.text
                     font.pixelSize: 13
-                    color: "#d32f2f" // Vermelho para indicar perigo
+                    color: "#d32f2f"
                     horizontalAlignment: Text.AlignHCenter
                 }
 
                 onClicked: {
-                    popupApagar.open() // Abre a janela perguntando se tem certeza
+                    popupApagar.open()
                 }
             }
 
-            // Botão Voltar discreto
             Button {
                 text: "← Voltar para a lista"
-                flat: true // Tira o fundo do botão, deixa só o texto
+                flat: true
                 Layout.alignment: Qt.AlignHCenter
 
                 contentItem: Text {

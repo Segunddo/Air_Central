@@ -15,20 +15,19 @@ class SaveData: public QObject
 public:
     SaveData();
 
-    void save_data(QJsonObject &data);
+    void save_data(const QJsonObject data);
 
-    Q_INVOKABLE void delete_data();
+    Q_INVOKABLE void delete_data(const QString &comando);
 
     Q_INVOKABLE void delete_all_data();
 
-    int get_buffer_size() {return buffer.size();};
+    Q_INVOKABLE int get_command_count(const QString &comando);
 
 signals:
-    void buffer_size_changed();
+    void codes_size_changed();
 
 private:
     QJsonObject data;
-    QVector<QJsonObject> buffer;
 };
 
 #endif // SAVEDATA_H

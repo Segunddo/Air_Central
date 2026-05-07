@@ -17,7 +17,7 @@ class ReceiveData : public QObject
     Q_OBJECT
 
 public:
-    explicit ReceiveData(QObject *parent = nullptr);
+    explicit ReceiveData(SaveData *saveData, QObject *parent = nullptr);
 
     QSerialPort* getSerialPort() { return serialPort; }
 

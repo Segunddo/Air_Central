@@ -3,9 +3,6 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
-    visible: true
-    width: 750
-    height: 450
 
     // Modelo teste
     ListModel {

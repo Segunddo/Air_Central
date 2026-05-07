@@ -10,9 +10,9 @@ int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
 
     // 1. Instanciamos apenas as classes que conversam com a Interface
-    ReceiveData receiveData;
-    SendData sendData(receiveData.getSerialPort());
     SaveData saveData;
+    ReceiveData receiveData(&saveData);
+    SendData sendData(receiveData.getSerialPort());
 
     QQmlApplicationEngine engine;
 

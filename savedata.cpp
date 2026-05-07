@@ -32,15 +32,15 @@ SaveData::SaveData()
     }
 }
 
-void SaveData::save_data(QJsonObject &newData)
+void SaveData::save_data(const QJsonObject newData)
 {
     bool foiModificado = false;
 
-    for (auto it = newData.begin(); it != newData.end(); ++it) {
+    for (auto it = newData.constBegin(); it != newData.constEnd(); ++it) {
         QString chave = it.key();
         QJsonValue novoCodigo = it.value();
 
-        QJsonArray arrayAtual = this->data[chave].toArray();
+        QJsonArray arrayAtual = this->data.value(chave).toArray();
 
         // Verifica se o código já existe no array (Evita duplicatas)
         if (!arrayAtual.contains(novoCodigo)) {
@@ -56,71 +56,50 @@ void SaveData::save_data(QJsonObject &newData)
 
     // Só reescreve o arquivo JSON se houver códigos novos de verdade
     if (foiModificado) {
-        // Adiciona ao buffer para caso deseje apagar dps
-        buffer.push_back(newData);
-        emit buffer_size_changed();
-
         QFile file("codes.json");
         if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QJsonDocument documento(this->data);
             file.write(documento.toJson(QJsonDocument::Indented));
             file.close();
             qDebug() << "Novo código adicionado à lista e salvo com sucesso!";
+            emit codes_size_changed();
         }
     } else {
         qDebug() << "O código recebido já estava salvo. Arquivo ignorado.";
     }
 }
 
-void SaveData::delete_data()
+void SaveData::delete_data(const QString &comando)
 {
-    bool foiModificado = false;
-
-    if (buffer.isEmpty()) {
-        qDebug() << "O buffer está vazio, nada para apagar.";
+    if (data.isEmpty()) {
+        qDebug() << "Está vazio, nada para apagar.";
         return;
     }
 
-    QJsonObject deleteData = buffer.last();
+    QJsonArray arrayAtual = data[comando].toArray();
 
-    for (auto it = deleteData.begin(); it != deleteData.end(); ++it) {
-        QString chave = it.key();
-        QJsonValue codigoParaRemover = it.value();
-
-        QJsonArray arrayAtual = this->data[chave].toArray();
-
-        // Procura a posição do item no QJsonArray
-        for (int i = 0; i < arrayAtual.size(); ++i) {
-            if (arrayAtual.at(i) == codigoParaRemover) {
-
-                // Se encontrou, apaga usando o índice!
-                arrayAtual.removeAt(i);
-
-                // Substitui o array antigo pelo novo array no objeto principal
-                this->data[chave] = arrayAtual;
-
-                foiModificado = true; // Avisa que teremos que salvar no disco
-
-                // Interrompe o loop do array, já que achamos e apagamos o valor
-                break;
-            }
-        }
+    if (arrayAtual.isEmpty()) {
+        qDebug() << "O comando" << comando << "já está sem códigos.";
+        return;
     }
 
-    if (foiModificado) {
-        QFile file("codes.json");
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QJsonDocument documento(this->data);
-            file.write(documento.toJson(QJsonDocument::Indented));
-            file.close();
-            qDebug() << "Novo código removido da lista e salvo com sucesso!";
-        } else {
-            qDebug() << "Erro ao salvar o código apagado da lista";
-        }
+    // Remove o ÚLTIMO elemento adicionado a este array
+    arrayAtual.removeLast();
+
+    data[comando] = arrayAtual;
+
+    // Salva
+    QFile file("codes.json");
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QJsonDocument documento(this->data);
+        file.write(documento.toJson(QJsonDocument::Indented));
+        file.close();
+        qDebug() << "Último código de" << comando << "apagado e arquivo salvo com sucesso!";
+    } else {
+        qDebug() << "Erro ao salvar o arquivo codes.json";
     }
 
-    buffer.removeLast();
-    emit buffer_size_changed();
+    emit codes_size_changed();
 
 }
 
@@ -129,5 +108,26 @@ void SaveData::delete_all_data()
     QFile file("codes.json");
     file.remove();
     qDebug() << "Arquivo apagado";
-    SaveData();
+
+    // Reinicializa o estado em memória igual ao construtor
+    this->data = QJsonObject();
+    this->data["Ligar"]    = QJsonArray();
+    this->data["Desligar"] = QJsonArray();
+    for (int i = 16; i <= 30; ++i)
+        this->data[QString::number(i)] = QJsonArray();
+
+    // Recria o arquivo limpo no disco
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        file.write(QJsonDocument(this->data).toJson(QJsonDocument::Indented));
+        file.close();
+        qDebug() << "Arquivo recriado limpo";
+    }
+
+    emit codes_size_changed();
 }
+
+Q_INVOKABLE int SaveData::get_command_count(const QString &comando)
+{
+    return this->data[comando].toArray().size();
+}
+

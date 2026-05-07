@@ -1,6 +1,6 @@
 #include "receivedata.h"
 
-ReceiveData::ReceiveData(QObject *parent) : QObject(parent)
+ReceiveData::ReceiveData(SaveData *saveData, QObject *parent) : QObject(parent) , saveData(saveData)
 {
     serialPort = new QSerialPort(this);
 

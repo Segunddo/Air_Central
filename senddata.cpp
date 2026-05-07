@@ -8,15 +8,20 @@ SendData::SendData(QSerialPort *portaSerial, QObject *parent)
 void SendData::send_command_status(QString idEsp, QString status)
 {
     QJsonObject jsonCommand;
-    jsonCommand["command"] = "Dispatch"; // Identificador para a ESP saber do que se trata
+    jsonCommand["command"] = "Dispatch";
     jsonCommand["id"] = idEsp;
     jsonCommand["status"] = status;
 
-    // Converte o status do QML para a chave usada no codes.json
     QString chaveBusca = (status == "Ligado") ? "Ligar" : "Desligar";
 
-    // Puxa os códigos e anexa ao pacote
-    jsonCommand["ir_codes"] = get_codes_from_file(chaveBusca);
+    // Pegamos o array de códigos salvos
+    QJsonArray arrayCodigos = get_codes_from_file(chaveBusca);
+
+    if (!arrayCodigos.isEmpty()) {
+        // Pegamos apenas o código mais recente (último do array)
+        // e enviamos como STRING, que é mais leve para a ESP
+        jsonCommand["code"] = arrayCodigos.last().toString();
+    }
 
     send_data(jsonCommand);
 }
@@ -28,8 +33,13 @@ void SendData::send_command_temp(QString idEsp, QString temperatura)
     jsonCommand["id"] = idEsp;
     jsonCommand["temp"] = temperatura;
 
-    // A temperatura vem exata buscando a chave direta
-    jsonCommand["ir_codes"] = get_codes_from_file(temperatura);
+    QJsonArray arrayCodigos = get_codes_from_file(temperatura);
+
+    if (!arrayCodigos.isEmpty()) {
+        // Pegamos apenas o código mais recente (último do array)
+        // e enviamos como STRING, que é mais leve para a ESP
+        jsonCommand["code"] = arrayCodigos.last().toString();
+    }
 
     send_data(jsonCommand);
 }

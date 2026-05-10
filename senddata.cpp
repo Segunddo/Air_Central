@@ -64,6 +64,16 @@ void SendData::require_ir_read()
     qDebug() << "Classe SendData requisitou leitura de infravermelho";
 }
 
+void SendData::require_espID_change(QString idEsp, QString newId)
+{
+    QJsonObject jsonRequest;
+    jsonRequest["command"] = "Change_ID";
+    jsonRequest["id"] = idEsp;
+    jsonRequest["new_id"] = newId;
+
+    send_data(jsonRequest);
+}
+
 void SendData::send_data(QJsonObject jsonCommand)
 {
     // Converte o objeto JSON para um formato que possa ser enviado pela rede

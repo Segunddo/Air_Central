@@ -4,9 +4,18 @@ import QtQuick.Layouts 1.15
 
 Item {
 
-    // Modelo teste
     ListModel {
         id: modeloLista
+    }
+
+    Timer {
+        id: refreshTimer
+        interval: 1500
+        repeat: false
+        onTriggered: {
+            modeloLista.clear()
+            sendData.requireEspsId()
+        }
     }
 
     Connections {
@@ -180,11 +189,71 @@ Item {
                     Layout.fillWidth: true
                     spacing: 2
 
-                    Text {
-                        text: model.name
-                        font.pixelSize: 16
-                        font.bold: true
-                        color: "#333333"
+                    RowLayout {
+                        spacing: 6
+                        width: parent.width
+
+                        TextInput {
+                            id: campoNome
+                            text: model.name
+                            font.pixelSize: 16
+                            font.bold: true
+                            color: "#333333"
+                            Layout.fillWidth: true
+
+                            // Borda sutil aparece só quando está em edição
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                width: parent.width
+                                height: 2
+                                color: parent.activeFocus ? "#007BFF" : "transparent"
+                            }
+                        }
+
+                        // Botão confirmar — só aparece quando o texto foi alterado
+                        Button {
+                            text: "✔"
+                            font.pixelSize: 14
+                            Layout.preferredWidth: 32
+                            Layout.preferredHeight: 32
+                            visible: campoNome.text !== model.name && campoNome.text.trim() !== ""
+
+                            background: Rectangle {
+                                color: parent.down ? "#388E3C" : "#4CAF50"
+                                radius: 6
+                            }
+
+                            palette.buttonText: "white"
+
+                            onClicked: {
+                                let novoId = campoNome.text.trim()
+                                let idAntigo = model.name
+
+                                // Pede pra ESP alterar o ID
+                                sendData.require_espID_change(idAntigo, novoId)
+
+                                // Aguarda um pouco e faz o refresh
+                                refreshTimer.start()
+                            }
+                        }
+
+                        // Botão cancelar edição
+                        Button {
+                            text: "✖"
+                            font.pixelSize: 14
+                            Layout.preferredWidth: 32
+                            Layout.preferredHeight: 32
+                            visible: campoNome.text !== model.name
+
+                            background: Rectangle {
+                                color: parent.down ? "#c62828" : "#e53935"
+                                radius: 6
+                            }
+
+                            palette.buttonText: "white"
+
+                            onClicked: campoNome.text = model.name
+                        }
                     }
                 }
 
@@ -202,7 +271,7 @@ Item {
                         modeloLista.setProperty(index, "status", novoStatus)
                     }
 
-                    palette.buttonText: model.status === "Ligado" ? "#d32f2f" : "#4CAF50"
+                    palette.buttonText: model.status === "Ligado" ? "#4CAF50" : "#d32f2f"
                 }
 
                 // Bloco de Controle da Temperatura Alvo (Setas + Display)

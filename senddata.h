@@ -26,6 +26,8 @@ public:
 
     Q_INVOKABLE void require_ir_read();
 
+    Q_INVOKABLE void require_espID_change(QString idEsp, QString newId);
+
 signals:
     void errorOccurred(QString errorMessage);
 

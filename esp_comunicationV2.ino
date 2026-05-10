@@ -22,6 +22,7 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
   StaticJsonDocument<256> filter;
   filter["command"] = true;
   filter["id"] = true;
+  filter["new_id"]  = true;
 
   StaticJsonDocument<256> docBasico;
   deserializeJson(docBasico, msg, DeserializationOption::Filter(filter));
@@ -37,6 +38,23 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
     serializeJson(docResposta, respostaJSON);
     mesh.sendSingle(nodeId_de_quem_enviou, respostaJSON);
   }
+  
+  if (command == "Change_ID" && docBasico["id"] == myID) {
+    String novoID = docBasico["new_id"].as<String>();
+
+    if (novoID.length() > 0) {
+        Serial.printf("Alterando ID de '%s' para '%s'\n", myID.c_str(), novoID.c_str());
+        myID = novoID;
+
+        // Confirma a mudança pra central
+        JsonDocument docResposta;
+        docResposta["command"] = "Resposta_ID";
+        docResposta["id"]      = myID;
+        String respostaJSON;
+        serializeJson(docResposta, respostaJSON);
+        mesh.sendSingle(nodeId_de_quem_enviou, respostaJSON);
+    }
+}
 
   if (command == "Dispatch" && docBasico["id"] == myID) {
     // Agora sim, usamos o buffer grande apenas se a mensagem for para MIM

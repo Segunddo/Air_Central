@@ -5,63 +5,47 @@ SendData::SendData(QSerialPort *portaSerial, QObject *parent)
 {
 }
 
-void SendData::send_command_status(QString idEsp, QString status)
+void SendData::send_all_codes(QJsonObject baseCommand, QJsonArray codigos)
 {
-    QJsonObject jsonCommand;
-    jsonCommand["command"] = "Dispatch";
-    jsonCommand["id"] = idEsp;
-    jsonCommand["status"] = status;
-
-    QString chaveBusca = (status == "Ligado") ? "Ligar" : "Desligar";
-
-    // Pegamos o array de códigos salvos
-    QJsonArray arrayCodigos = get_codes_from_file(chaveBusca);
-
-    if (!arrayCodigos.isEmpty()) {
-        // Pegamos apenas o código mais recente (último do array)
-        // e enviamos como STRING, que é mais leve para a ESP
-        jsonCommand["code"] = arrayCodigos.last().toString();
+    if (codigos.isEmpty()) {
+        qDebug() << "Nenhum código IR salvo para este comando.";
+        return;
     }
 
-    send_data(jsonCommand);
+    for (int i = 0; i < codigos.size(); i++) {
+        QString codigo = codigos[i].toString();
+
+        QTimer::singleShot(i * 100, this, [this, baseCommand, codigo]() {
+            QJsonObject cmd = baseCommand;
+            cmd["code"] = codigo;
+            send_data(cmd);
+        });
+    }
+}
+
+void SendData::send_command_status(QString idEsp, QString status)
+{
+    QJsonObject baseCommand;
+    baseCommand["command"] = "Dispatch";
+    baseCommand["id"]      = idEsp;
+    baseCommand["status"]  = status;
+
+    QString chaveBusca = (status == "Ligado") ? "Ligar" : "Desligar";
+    QJsonArray codigos = get_codes_from_file(chaveBusca);
+
+    send_all_codes(baseCommand, codigos);
 }
 
 void SendData::send_command_temp(QString idEsp, QString temperatura)
 {
-    QJsonObject jsonCommand;
-    jsonCommand["command"] = "Dispatch"; // Identificador para a ESP saber do que se trata
-    jsonCommand["id"] = idEsp;
-    jsonCommand["temp"] = temperatura;
+    QJsonObject baseCommand;
+    baseCommand["command"] = "Dispatch";
+    baseCommand["id"]      = idEsp;
+    baseCommand["temp"]    = temperatura;
 
-    QJsonArray arrayCodigos = get_codes_from_file(temperatura);
+    QJsonArray codigos = get_codes_from_file(temperatura);
 
-    if (!arrayCodigos.isEmpty()) {
-        // Pegamos apenas o código mais recente (último do array)
-        // e enviamos como STRING, que é mais leve para a ESP
-        jsonCommand["code"] = arrayCodigos.last().toString();
-    }
-
-    send_data(jsonCommand);
-}
-
-void SendData::requireEspsId()
-{
-    // Apenas pede para a ESP Bridge enviar a lista de nós conhecidos pela Mesh
-    QJsonObject jsonRequest;
-    jsonRequest["command"] = "Require_IDs";
-
-    send_data(jsonRequest);
-
-    qDebug() << "Classe SendData requisitou IDs";
-}
-
-void SendData::require_ir_read()
-{
-    QJsonObject jsonRequest;
-    jsonRequest["command"] = "Require_IR"; // Nome do comando que sua ESP entende para entrar em modo leitura
-
-    send_data(jsonRequest);
-    qDebug() << "Classe SendData requisitou leitura de infravermelho";
+    send_all_codes(baseCommand, codigos);
 }
 
 void SendData::require_espID_change(QString idEsp, QString newId)
@@ -74,16 +58,29 @@ void SendData::require_espID_change(QString idEsp, QString newId)
     send_data(jsonRequest);
 }
 
+void SendData::requireEspsId()
+{
+    QJsonObject jsonRequest;
+    jsonRequest["command"] = "Require_IDs";
+    send_data(jsonRequest);
+    qDebug() << "Classe SendData requisitou IDs";
+}
+
+void SendData::require_ir_read()
+{
+    QJsonObject jsonRequest;
+    jsonRequest["command"] = "Require_IR";
+    send_data(jsonRequest);
+    qDebug() << "Classe SendData requisitou leitura de infravermelho";
+}
+
 void SendData::send_data(QJsonObject jsonCommand)
 {
-    // Converte o objeto JSON para um formato que possa ser enviado pela rede
     QJsonDocument doc(jsonCommand);
     QByteArray data = doc.toJson(QJsonDocument::Compact);
-
     data.append('\n');
 
-    // Se a porta estiver aberta e válida, envia os dados!
-    if(serial && serial->isOpen()) {
+    if (serial && serial->isOpen()) {
         serial->write(data);
         qDebug() << "Classe SendData disparou:" << data;
     } else {

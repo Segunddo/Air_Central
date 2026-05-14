@@ -23,6 +23,8 @@ public:
     Q_INVOKABLE void send_command_temp(QString idEsp, QString temperatura);
     Q_INVOKABLE void requireEspsId();
     Q_INVOKABLE void require_ir_read();
+    Q_INVOKABLE void require_espID_change(QString idEsp, QString newId);
+
 
 signals:
     void errorOccurred(QString errorMessage);
@@ -32,7 +34,6 @@ private:
     void send_all_codes(QJsonObject baseCommand, QJsonArray codigos);
 
     QJsonArray get_codes_from_file(const QString& chave);
-    Q_INVOKABLE void require_espID_change(QString idEsp, QString newId);
 
     QSerialPort *serial;
 };

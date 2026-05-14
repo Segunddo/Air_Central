@@ -4,4 +4,5 @@ build-*/
 
 # Ignorar configurações de usuário do Qt Creator
 *.user
-CMakeLists.txt.user
+CMakeLists.txt.user.vscode/browse.vc.db
+.vscode/

@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
+#include <Preferences.h>
 
 #define MESH_PREFIX   "CI_Rede" // Nome invisível da malha
 #define MESH_PASSWORD "corredor"     // Senha da malha
@@ -9,7 +10,8 @@
 
 painlessMesh mesh;
 
-String myID = "CI101"; 
+Preferences preferences;
+String myID; 
 
 bool powerStatus = false;
 int temperaturaAtual = 25;
@@ -19,12 +21,12 @@ const uint16_t IR_SEND_PIN = 4;
 IRsend irsend(IR_SEND_PIN);
 
 void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
-  StaticJsonDocument<256> filter;
+  JsonDocument filter;
   filter["command"] = true;
   filter["id"] = true;
   filter["new_id"]  = true;
 
-  StaticJsonDocument<256> docBasico;
+  JsonDocument docBasico;
   deserializeJson(docBasico, msg, DeserializationOption::Filter(filter));
 
   String command = docBasico["command"];
@@ -46,6 +48,9 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
         Serial.printf("Alterando ID de '%s' para '%s'\n", myID.c_str(), novoID.c_str());
         myID = novoID;
 
+        // Muda a nível de flash
+        preferences.putString("nodeID", myID);
+
         // Confirma a mudança pra central
         JsonDocument docResposta;
         docResposta["command"] = "Resposta_ID";
@@ -57,36 +62,47 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
 }
 
   if (command == "Dispatch" && docBasico["id"] == myID) {
-    // Agora sim, usamos o buffer grande apenas se a mensagem for para MIM
-    DynamicJsonDocument docRaw(2048); 
+    // Aumentamos o buffer para evitar o estouro com a cópia da string longa
+    JsonDocument docRaw; 
     DeserializationError erro = deserializeJson(docRaw, msg);
     
     if (erro) {
-      Serial.println("Erro ao decodificar JSON RAW longo");
+      Serial.print("Erro ao decodificar JSON RAW longo: ");
+      Serial.println(erro.c_str()); // Agora vai te dizer o motivo exato do erro!
       return;
     }
 
     if (docRaw.containsKey("code")) {
-      String rawStr = docRaw["code"].as<String>();
+      // Pegamos como const char* para não criar cópias pesadas da classe String
+      const char* rawStr = docRaw["code"]; 
       
       int count = 1;
-      for (int i = 0; i < rawStr.length(); i++) if (rawStr[i] == ',') count++;
+      for (int i = 0; rawStr[i] != '\0'; i++) {
+        if (rawStr[i] == ',') count++;
+      }
 
       uint16_t* pRaw = new (std::nothrow) uint16_t[count]; 
       if (pRaw != nullptr) {
         int index = 0;
-        int pos = 0;
-        while (rawStr.indexOf(",", pos) != -1) {
-          int nextPos = rawStr.indexOf(",", pos);
-          pRaw[index++] = rawStr.substring(pos, nextPos).toInt();
-          pos = nextPos + 1;
+        int currentVal = 0;
+        
+        // Algoritmo de extração ultrarrápido (não fragmenta a heap)
+        for (int i = 0; rawStr[i] != '\0'; i++) {
+          if (rawStr[i] == ',') {
+            pRaw[index++] = currentVal;
+            currentVal = 0; // Reseta para o próximo número
+          } else if (isDigit(rawStr[i])) {
+            // Constrói o número inteiro dígito por dígito
+            currentVal = (currentVal * 10) + (rawStr[i] - '0');
+          }
         }
-        pRaw[index] = rawStr.substring(pos).toInt();
+        pRaw[index] = currentVal; // Adiciona o último valor da lista
 
         irsend.sendRaw(pRaw, count, 38);
         yield();
         delete[] pRaw;
-        Serial.printf("RAW enviado: %d pulsos\n", count);
+      } else {
+        Serial.println("ERRO CRÍTICO: Sem memória (Heap) para criar o array de pulsos!");
       }
     }
 
@@ -95,7 +111,6 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
     
     enviarStatusCentral(); 
   }
-}
 
 void enviarStatusCentral() {
   JsonDocument docStatus;
@@ -112,6 +127,9 @@ void enviarStatusCentral() {
 }
 
 void setup() {
+  preferences.begin("config", false);
+  myID = preferences.getString("nodeID", "CI000");
+
   Serial.begin(115200);
   mesh.init(MESH_PREFIX, MESH_PASSWORD, MESH_PORT);
   mesh.setDebugMsgTypes(0);

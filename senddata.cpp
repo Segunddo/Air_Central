@@ -15,7 +15,7 @@ void SendData::send_all_codes(QJsonObject baseCommand, QJsonArray codigos)
     for (int i = 0; i < codigos.size(); i++) {
         QString codigo = codigos[i].toString();
 
-        QTimer::singleShot(i * 1000, this, [this, baseCommand, codigo]() {
+        QTimer::singleShot(i * 100, this, [this, baseCommand, codigo]() {
             QJsonObject cmd = baseCommand;
             cmd["code"] = codigo;
             send_data(cmd);

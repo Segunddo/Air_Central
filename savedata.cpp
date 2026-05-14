@@ -130,4 +130,3 @@ Q_INVOKABLE int SaveData::get_command_count(const QString &comando)
 {
     return this->data[comando].toArray().size();
 }
-

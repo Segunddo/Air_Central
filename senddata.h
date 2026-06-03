@@ -23,18 +23,24 @@ public:
     Q_INVOKABLE void send_command_temp(QString idEsp, QString temperatura);
     Q_INVOKABLE void requireEspsId();
     Q_INVOKABLE void require_ir_read();
+    Q_INVOKABLE void require_espID_change(const QString idEsp, const QString newId);
 
 signals:
     void errorOccurred(QString errorMessage);
+
+private slots:
+    void verificar_e_disparar_agendamentos();
 
 private:
     // NOVO: envia todos os códigos de um array em sequência com delay
     void send_all_codes(QJsonObject baseCommand, QJsonArray codigos);
 
     QJsonArray get_codes_from_file(const QString& chave);
-    Q_INVOKABLE void require_espID_change(QString idEsp, QString newId);
 
     QSerialPort *serial;
+
+    QTimer *timerAutomacao;
+    QString ultimaHoraDisparada;
 };
 
 #endif // SENDDATA_H

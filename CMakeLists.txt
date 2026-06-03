@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick SerialPort)
+find_package(Qt6${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -35,6 +36,11 @@ set_target_properties(appCentral_Ar_Condicionado PROPERTIES
 
 target_link_libraries(appCentral_Ar_Condicionado
     PRIVATE Qt6::Quick Qt6::SerialPort
+    Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Gui
+        Qt${QT_VERSION_MAJOR}::Qml
+        Qt${QT_VERSION_MAJOR}::Quick
+        Qt${QT_VERSION_MAJOR}::QuickControls2
 )
 
 include(GNUInstallDirs)

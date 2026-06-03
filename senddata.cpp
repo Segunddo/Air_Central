@@ -3,6 +3,12 @@
 SendData::SendData(QSerialPort *portaSerial, QObject *parent)
     : QObject(parent), serial(portaSerial)
 {
+    // Inicializa o motor de automação em background
+    timerAutomacao = new QTimer(this);
+    connect(timerAutomacao, &QTimer::timeout, this, &SendData::verificar_e_disparar_agendamentos);
+
+    // Roda a cada 30 segundos para garantir que pegará o minuto exato da virada do relógio
+    timerAutomacao->start(30000);
 }
 
 void SendData::send_all_codes(QJsonObject baseCommand, QJsonArray codigos)
@@ -48,7 +54,7 @@ void SendData::send_command_temp(QString idEsp, QString temperatura)
     send_all_codes(baseCommand, codigos);
 }
 
-void SendData::require_espID_change(QString idEsp, QString newId)
+void SendData::require_espID_change(const QString idEsp, const QString newId)
 {
     QJsonObject jsonRequest;
     jsonRequest["command"] = "Change_ID";
@@ -109,4 +115,58 @@ QJsonArray SendData::get_codes_from_file(const QString& chave)
     }
 
     return arrayCodigos;
+}
+
+void SendData::verificar_e_disparar_agendamentos()
+{
+    // Pega o horário atual do computador
+    QString horaAtual = QTime::currentTime().toString("hh:mm");
+
+    // Trava de segurança: se já checou/disparou as rotinas desse minuto, ignora até o próximo minuto
+    if (horaAtual == ultimaHoraDisparada) {
+        return;
+    }
+
+    QFile file("agendamentos.json");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return;
+    }
+
+    QByteArray fileData = file.readAll();
+    file.close();
+
+    QJsonDocument doc = QJsonDocument::fromJson(fileData);
+    if (doc.isNull() || !doc.isObject()) return;
+
+    QJsonObject rootObj = doc.object();
+
+    for (auto it = rootObj.begin(); it != rootObj.end(); ++it) {
+        QString idEsp = it.key();
+        QJsonArray rotinas = it.value().toArray();
+
+        for (int i = 0; i < rotinas.size(); ++i) {
+            QJsonObject rotina = rotinas[i].toObject();
+
+            // Se a hora salva bater milimetricamente com a hora atual do sistema...
+            if (rotina["hora"].toString() == horaAtual) {
+                QString acao = rotina["acao"].toString();
+                QString temp = rotina["temp"].toString();
+
+                qDebug() << "⏰ [AUTOMAÇÃO] Hora do Gatilho alcançada (" << horaAtual << ") para o dispositivo:" << idEsp;
+
+                send_command_status(idEsp, acao);
+
+                // Se a ação for ligar, dispara o comando de temperatura logo em seguida
+                if (acao == "Ligar" && temp != "--") {
+                    // Dá um micro delay de 500ms para não atropelar a escrita serial do comando anterior
+                    QTimer::singleShot(500, this, [this, idEsp, temp]() {
+                        send_command_temp(idEsp, temp);
+                    });
+                }
+            }
+        }
+    }
+
+    // Marca o minuto atual como verificado/processado com sucesso
+    ultimaHoraDisparada = horaAtual;
 }

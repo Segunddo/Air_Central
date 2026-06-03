@@ -1,13 +1,19 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
 
 #include "receivedata.h"
 #include "senddata.h"
 #include "savedata.h"
 
 int main(int argc, char *argv[]) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
     QGuiApplication app(argc, argv);
+
+    QQuickStyle::setStyle("Basic");
 
     // 1. Instanciamos apenas as classes que conversam com a Interface
     SaveData saveData;

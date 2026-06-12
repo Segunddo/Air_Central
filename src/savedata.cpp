@@ -162,28 +162,26 @@ void SaveData::salvar_arquivo(const QJsonObject &jsonObj)
     file.close();
 }
 
-void SaveData::adicionar_regra(QString idEsp, QString hora, QString acao, QString temp)
+void SaveData::adicionar_regra(QString idEsp, QString hora, QString acao, QString temp, QString dia)
 {
     QJsonObject rootObj = ler_arquivo();
     QJsonArray regrasArray;
 
-    // Se o ESP já tiver regras, pega o array atual
     if (rootObj.contains(idEsp)) {
         regrasArray = rootObj[idEsp].toArray();
     }
 
-    // Cria a nova regra
     QJsonObject novaRegra;
+    novaRegra["dia"]  = dia;
     novaRegra["hora"] = hora;
     novaRegra["acao"] = acao;
     novaRegra["temp"] = temp;
 
-    // Adiciona na lista e salva
     regrasArray.append(novaRegra);
     rootObj[idEsp] = regrasArray;
 
     salvar_arquivo(rootObj);
-    qDebug() << "Regra adicionada para" << idEsp << ":" << novaRegra;
+    qDebug() << "Regra adicionada com sucesso para" << idEsp << ":" << novaRegra;
 }
 
 void SaveData::remover_regra(QString idEsp, int index)
@@ -214,4 +212,40 @@ QString SaveData::obter_regras(QString idEsp)
     }
 
     return "[]"; // Retorna array vazio se não tiver nada
+}
+
+void SaveData::importar_saci(const QString &centroId, int tempPadrao)
+{
+    qDebug() << "Disparando automação do script Python saci_ci.py...";
+
+    QProcess *process = new QProcess(this);
+    QStringList argumentos;
+
+    // Monta os argumentos mapeando os parâmetros passados pela UI
+    argumentos << "saci_ci.py"
+               << "--id" << centroId
+               << "--temp" << QString::number(tempPadrao)
+               << "--out" << ARQUIVO_AGENDAMENTOS;
+
+    // Gerencia o término da execução assíncrona do script
+    QObject::connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                     [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
+                         if (exitCode == 0 && exitStatus == QProcess::NormalExit) {
+                             qDebug() << "Script SACI executado com sucesso. JSON atualizado.";
+                             emit agendamentos_atualizados();
+                         } else {
+                             qDebug() << "Erro crítico ou timeout ao rodar o script Python. Código de saída:" << exitCode;
+
+                             qDebug() << "LOG DE ERRO DO PYTHON:" << process->readAllStandardError();
+                         }
+                         process->deleteLater();
+                     });
+
+    #ifdef Q_OS_WIN
+        QString pythonCmd = "python";
+    #else
+        QString pythonCmd = "python3";
+    #endif
+
+    process->start(pythonCmd, argumentos);
 }

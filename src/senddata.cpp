@@ -122,9 +122,22 @@ void SendData::verificar_e_disparar_agendamentos()
     // Pega o horário atual do computador
     QString horaAtual = QTime::currentTime().toString("hh:mm");
 
-    // Trava de segurança: se já checou/disparou as rotinas desse minuto, ignora até o próximo minuto
+    // Trava de segurança para não disparar 60 vezes no mesmo minuto
     if (horaAtual == ultimaHoraDisparada) {
         return;
+    }
+
+    // Lógica do dia da semana
+    int diaNumero = QDate::currentDate().dayOfWeek();
+    QString diaAtual;
+    switch(diaNumero) {
+        case 1: diaAtual = "Seg"; break;
+        case 2: diaAtual = "Ter"; break;
+        case 3: diaAtual = "Qua"; break;
+        case 4: diaAtual = "Qui"; break;
+        case 5: diaAtual = "Sex"; break;
+        case 6: diaAtual = "Sab"; break;
+        case 7: diaAtual = "Dom"; break;
     }
 
     QFile file("agendamentos.json");
@@ -147,12 +160,16 @@ void SendData::verificar_e_disparar_agendamentos()
         for (int i = 0; i < rotinas.size(); ++i) {
             QJsonObject rotina = rotinas[i].toObject();
 
-            // Se a hora salva bater milimetricamente com a hora atual do sistema...
-            if (rotina["hora"].toString() == horaAtual) {
+            // Puxa a hora e o dia configurados no JSON
+            QString horaAgendada = rotina["hora"].toString();
+            QString diaAgendado = rotina["dia"].toString();
+
+            // Verifica se TANTO a hora QUANTO o dia batem com o momento presente
+            if (horaAgendada == horaAtual && diaAgendado == diaAtual) {
                 QString acao = rotina["acao"].toString();
                 QString temp = rotina["temp"].toString();
 
-                qDebug() << "⏰ [AUTOMAÇÃO] Hora do Gatilho alcançada (" << horaAtual << ") para o dispositivo:" << idEsp;
+                qDebug() << "⏰ [AUTOMAÇÃO] Gatilho alcançado (" << diaAtual << horaAtual << ") para:" << idEsp;
 
                 send_command_status(idEsp, acao);
 

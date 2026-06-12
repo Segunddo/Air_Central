@@ -10,6 +10,7 @@
 #include <QJsonArray>
 #include <QFile>
 #include <QTimer>
+#include <QDate>
 
 class SendData : public QObject
 {

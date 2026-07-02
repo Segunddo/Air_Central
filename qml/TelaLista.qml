@@ -337,90 +337,109 @@ Item {
         model: modeloLista
         clip: true
         header: Item {
-            width: ListView.view.width
-            height: 70
-            z: 2
+                    width: ListView.view.width
+                    height: 70
+                    z: 2
 
-            RowLayout {
-                anchors.fill: parent
-                anchors.bottomMargin: 15
-                spacing: 8
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.bottomMargin: 15
+                        spacing: 8
 
-                Button {
-                    text: "🔄"
-                    Layout.preferredWidth: 42; Layout.preferredHeight: 42
-                    background: Rectangle { color: parent.pressed ? "#e2e8f0" : "#ffffff"; border.color: "#cbd5e1"; radius: 10 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 16; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    onClicked: {
-                        modeloLista.clear()
-                        if (typeof receiveData !== "undefined") comboPorta.model = receiveData.list_ports()
-                        if (typeof sendData !== "undefined") sendData.requireEspsId()
-                    }
-                }
+                        // Botão de Refresh
+                        Button {
+                            text: "🔄"
+                            Layout.preferredWidth: 42; Layout.preferredHeight: 42
+                            background: Rectangle { color: parent.pressed ? "#e2e8f0" : "#ffffff"; border.color: "#cbd5e1"; radius: 10 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 16; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            onClicked: {
+                                modeloLista.clear()
+                                if (typeof receiveData !== "undefined") comboPorta.model = receiveData.list_ports()
+                                if (typeof sendData !== "undefined") sendData.requireEspsId()
+                            }
+                        }
 
-                // Botão de Importação Corrigido para Chamar o Script Python pelo Backend C++
-                Button {
-                    text: "📥 Importar SACI"
-                    Layout.preferredWidth: 150; Layout.preferredHeight: 42
-                    font.pixelSize: 13; font.bold: true
-                    contentItem: Text { text: parent.text; font: parent.font; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { color: parent.pressed ? "#16a34a" : "#22c55e"; radius: 10 }
-                    onClicked: {
-                        console.log("Executando parser de salas via script python assíncrono...")
-                        if (typeof saveData !== "undefined") {
-                            // Executa a carga para o Centro 'CI', com temperatura alvo padrão em 22°C
-                            saveData.importar_saci("CI", 22)
-                        } else {
-                            refreshTimer.start()
+                        // Botão de Importar SACI
+                        Button {
+                            text: "📥 Importar SACI"
+                            Layout.preferredWidth: 150; Layout.preferredHeight: 42
+                            font.pixelSize: 13; font.bold: true
+                            contentItem: Text { text: parent.text; font: parent.font; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            background: Rectangle { color: parent.pressed ? "#16a34a" : "#22c55e"; radius: 10 }
+                            onClicked: {
+                                console.log("Executando parser de salas via script python assíncrono...")
+                                if (typeof saveData !== "undefined") {
+                                    saveData.importar_saci("CI", 22)
+                                } else {
+                                    refreshTimer.start()
+                                }
+                            }
+                        }
+
+                        // --- NOVO BOTÃO DE SINCRONIZAR TUDO ---
+                        Button {
+                            text: "📡 Sinc."
+                            Layout.preferredWidth: 90; Layout.preferredHeight: 42
+                            font.pixelSize: 13; font.bold: true
+                            contentItem: Text { text: parent.text; font: parent.font; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            background: Rectangle { color: parent.pressed ? "#2563eb" : "#3b82f6"; radius: 10 } // Cor azul para destacar ação de rede
+                            onClicked: {
+                                console.log("Iniciando envio da fila de sincronização para as ESPs...")
+                                if (typeof sendData !== "undefined") {
+                                    sendData.sinc_esp_data()
+                                }
+                            }
+                        }
+                        // --------------------------------------
+
+                        // Botão Códigos IR
+                        Button {
+                            text: "⚙️ Códigos IR"
+                            Layout.preferredWidth: 130; Layout.preferredHeight: 42
+                            font.pixelSize: 13; font.bold: true
+                            contentItem: Text { text: parent.text; font: parent.font; color: "#334155"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            background: Rectangle { color: parent.pressed ? "#e2e8f0" : "#ffffff"; border.color: "#cbd5e1"; radius: 10 }
+                            onClicked: { if (typeof stackView !== "undefined") stackView.push("TelaCadastro.qml") }
+                        }
+
+                        Item { Layout.fillWidth: true } // Espaçador que empurra a conexão pra direita
+
+                        // ComboBox de Portas
+                        ComboBox {
+                            id: comboPorta
+                            model: (typeof receiveData !== "undefined") ? receiveData.list_ports() : ["COM1", "COM2"]
+                            font.pixelSize: 13
+                            Layout.preferredWidth: 120; Layout.preferredHeight: 42
+                            background: Rectangle { color: "#ffffff"; border.color: "#cbd5e1"; radius: 10 }
+                            leftPadding: 12; rightPadding: 12
+                        }
+
+                        // Botão de Conectar
+                        Button {
+                            id: btnConectar
+                            text: "🛜 Conectar"
+                            Layout.preferredWidth: 130; Layout.preferredHeight: 42
+                            font.pixelSize: 13; font.bold: true
+                            contentItem: Text {
+                                id: textoDoBotao
+                                text: parent.text; font: parent.font; color: "#334155"
+                                horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                            }
+                            background: Rectangle { color: parent.pressed ? "#e2e8f0" : "#ffffff"; border.color: "#cbd5e1"; radius: 10 }
+                            onClicked: {
+                                var porta = comboPorta.currentText.trim()
+                                if (porta === "" || typeof receiveData === "undefined") return
+                                if (receiveData.conectar(porta)) {
+                                    btnConectar.text = "🛜 Desconectar"
+                                    textoDoBotao.color = "#ef4444"
+                                } else {
+                                    btnConectar.text = "🛜 Conectar"
+                                    textoDoBotao.color = "#334155"
+                                }
+                            }
                         }
                     }
                 }
-
-                Button {
-                    text: "⚙️ Códigos IR"
-                    Layout.preferredWidth: 130; Layout.preferredHeight: 42
-                    font.pixelSize: 13; font.bold: true
-                    contentItem: Text { text: parent.text; font: parent.font; color: "#334155"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { color: parent.pressed ? "#e2e8f0" : "#ffffff"; border.color: "#cbd5e1"; radius: 10 }
-                    onClicked: { if (typeof stackView !== "undefined") stackView.push("TelaCadastro.qml") }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                ComboBox {
-                    id: comboPorta
-                    model: (typeof receiveData !== "undefined") ? receiveData.list_ports() : ["COM1", "COM2"]
-                    font.pixelSize: 13
-                    Layout.preferredWidth: 120; Layout.preferredHeight: 42
-                    background: Rectangle { color: "#ffffff"; border.color: "#cbd5e1"; radius: 10 }
-                    leftPadding: 12; rightPadding: 12
-                }
-
-                Button {
-                    id: btnConectar
-                    text: "🛜 Conectar"
-                    Layout.preferredWidth: 130; Layout.preferredHeight: 42
-                    font.pixelSize: 13; font.bold: true
-                    contentItem: Text {
-                        id: textoDoBotao
-                        text: parent.text; font: parent.font; color: "#334155"
-                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-                    }
-                    background: Rectangle { color: parent.pressed ? "#e2e8f0" : "#ffffff"; border.color: "#cbd5e1"; radius: 10 }
-                    onClicked: {
-                        var porta = comboPorta.currentText.trim()
-                        if (porta === "" || typeof receiveData === "undefined") return
-                        if (receiveData.conectar(porta)) {
-                            btnConectar.text = "🛜 Desconectar"
-                            textoDoBotao.color = "#ef4444"
-                        } else {
-                            btnConectar.text = "🛜 Conectar"
-                            textoDoBotao.color = "#334155"
-                        }
-                    }
-                }
-            }
-        }
 
         delegate: Rectangle {
             width: ListView.view.width

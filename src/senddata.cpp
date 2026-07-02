@@ -3,12 +3,9 @@
 SendData::SendData(QSerialPort *portaSerial, QObject *parent)
     : QObject(parent), serial(portaSerial)
 {
-    // Inicializa o motor de automação em background
-    timerAutomacao = new QTimer(this);
-    connect(timerAutomacao, &QTimer::timeout, this, &SendData::verificar_e_disparar_agendamentos);
-
-    // Roda a cada 30 segundos para garantir que pegará o minuto exato da virada do relógio
-    timerAutomacao->start(30000);
+    // Prepara o timer que vai esvaziar a fila (150ms entre cada envio)
+    timerFila = new QTimer(this);
+    connect(timerFila, &QTimer::timeout, this, &SendData::process_data);
 }
 
 void SendData::send_all_codes(QJsonObject baseCommand, QJsonArray codigos)
@@ -117,73 +114,122 @@ QJsonArray SendData::get_codes_from_file(const QString& chave)
     return arrayCodigos;
 }
 
-void SendData::verificar_e_disparar_agendamentos()
+void SendData::sinc_esp_data()
 {
-    // Pega o horário atual do computador
-    QString horaAtual = QTime::currentTime().toString("hh:mm");
+    filaDeMensagens.clear(); // Limpa qualquer envio que tenha ficado travado
 
-    // Trava de segurança para não disparar 60 vezes no mesmo minuto
-    if (horaAtual == ultimaHoraDisparada) {
-        return;
-    }
+    // ---------------------------------------------------------
+    // PASSO 1: Empacotar a Hora Atual
+    // ---------------------------------------------------------
+    QJsonObject cmdTime;
+    cmdTime["command"] = "Sync_Time";
 
-    // Lógica do dia da semana
+    QTime horaAtual = QTime::currentTime();
+    cmdTime["hora"]   = horaAtual.hour();
+    cmdTime["minuto"] = horaAtual.minute();
+
     int diaNumero = QDate::currentDate().dayOfWeek();
-    QString diaAtual;
+    QString diaString;
     switch(diaNumero) {
-        case 1: diaAtual = "Seg"; break;
-        case 2: diaAtual = "Ter"; break;
-        case 3: diaAtual = "Qua"; break;
-        case 4: diaAtual = "Qui"; break;
-        case 5: diaAtual = "Sex"; break;
-        case 6: diaAtual = "Sab"; break;
-        case 7: diaAtual = "Dom"; break;
+    case 1: diaString = "Seg"; break;
+    case 2: diaString = "Ter"; break;
+    case 3: diaString = "Qua"; break;
+    case 4: diaString = "Qui"; break;
+    case 5: diaString = "Sex"; break;
+    case 6: diaString = "Sab"; break;
+    case 7: diaString = "Dom"; break;
     }
+    cmdTime["dia"] = diaString;
 
-    QFile file("agendamentos.json");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return;
-    }
+    filaDeMensagens.enqueue(cmdTime); // Coloca o relógio como a 1ª coisa da fila
 
-    QByteArray fileData = file.readAll();
-    file.close();
+    // ---------------------------------------------------------
+    // PASSO 2: Empacotar os Agendamentos e Códigos
+    // ---------------------------------------------------------
+    QFile fileAgendamentos("agendamentos.json");
+    QFile fileCodes("codes.json");
 
-    QJsonDocument doc = QJsonDocument::fromJson(fileData);
-    if (doc.isNull() || !doc.isObject()) return;
+    if (fileAgendamentos.open(QIODevice::ReadOnly) && fileCodes.open(QIODevice::ReadOnly)) {
 
-    QJsonObject rootObj = doc.object();
+        QJsonObject rootAgendamentos = QJsonDocument::fromJson(fileAgendamentos.readAll()).object();
+        QJsonObject objCodes = QJsonDocument::fromJson(fileCodes.readAll()).object();
 
-    for (auto it = rootObj.begin(); it != rootObj.end(); ++it) {
-        QString idEsp = it.key();
-        QJsonArray rotinas = it.value().toArray();
+        fileAgendamentos.close();
+        fileCodes.close();
 
-        for (int i = 0; i < rotinas.size(); ++i) {
-            QJsonObject rotina = rotinas[i].toObject();
+        // Itera sobre cada ESP salva nos agendamentos
+        for (auto it = rootAgendamentos.begin(); it != rootAgendamentos.end(); ++it) {
+            QString idEsp = it.key();
+            QJsonArray rotinas = it.value().toArray();
 
-            // Puxa a hora e o dia configurados no JSON
-            QString horaAgendada = rotina["hora"].toString();
-            QString diaAgendado = rotina["dia"].toString();
+            if (rotinas.isEmpty()) continue;
 
-            // Verifica se TANTO a hora QUANTO o dia batem com o momento presente
-            if (horaAgendada == horaAtual && diaAgendado == diaAtual) {
+            // Manda a ESP limpar a memória antes de receber os dados novos
+            QJsonObject cmdClear;
+            cmdClear["command"] = "Clear_Memory";
+            cmdClear["id"] = idEsp;
+            filaDeMensagens.enqueue(cmdClear);
+
+            QStringList codigosJaEnviados; // Evita mandar o mesmo código IR repetido pra mesma placa
+
+            for (int i = 0; i < rotinas.size(); ++i) {
+                QJsonObject rotina = rotinas[i].toObject();
+
                 QString acao = rotina["acao"].toString();
                 QString temp = rotina["temp"].toString();
+                QString nomeCodigo = (acao == "Ligar" && temp != "--") ? temp : acao;
 
-                qDebug() << "⏰ [AUTOMAÇÃO] Gatilho alcançado (" << diaAtual << horaAtual << ") para:" << idEsp;
+                // Empacota o Código IR (se ainda não foi enviado)
+                if (!codigosJaEnviados.contains(nomeCodigo) && objCodes.contains(nomeCodigo)) {
+                    QJsonObject cmdCode;
+                    cmdCode["command"] = "Add_Code";
+                    cmdCode["id"] = idEsp;
+                    cmdCode["name"] = nomeCodigo;
 
-                send_command_status(idEsp, acao);
+                    // Transforma o array [4500, 4400...] em string "4500,4400..."
+                    const QJsonArray rawArray = objCodes[nomeCodigo].toArray();
+                    QStringList rawStringList;
+                    for (QJsonValue val : rawArray) {
+                        rawStringList << QString::number(val.toInt());
+                    }
+                    cmdCode["raw"] = rawStringList.join(",");
 
-                // Se a ação for ligar, dispara o comando de temperatura logo em seguida
-                if (acao == "Ligar" && temp != "--") {
-                    // Dá um micro delay de 500ms para não atropelar a escrita serial do comando anterior
-                    QTimer::singleShot(500, this, [this, idEsp, temp]() {
-                        send_command_temp(idEsp, temp);
-                    });
+                    filaDeMensagens.enqueue(cmdCode);
+                    codigosJaEnviados.append(nomeCodigo);
                 }
+
+                // Empacota a Tarefa (Agenda)
+                QJsonObject cmdSchedule;
+                cmdSchedule["command"] = "Add_Schedule";
+                cmdSchedule["id"] = idEsp;
+                cmdSchedule["dia"] = rotina["dia"].toString();
+                cmdSchedule["hora"] = rotina["hora"].toString();
+                cmdSchedule["code"] = nomeCodigo;
+                filaDeMensagens.enqueue(cmdSchedule);
             }
         }
+    } else {
+        qDebug() << "Aviso: Não foi possível ler agendamentos.json ou codes.json";
     }
 
-    // Marca o minuto atual como verificado/processado com sucesso
-    ultimaHoraDisparada = horaAtual;
+    // ---------------------------------------------------------
+    // PASSO 3: Iniciar o Disparo
+    // ---------------------------------------------------------
+    if (!filaDeMensagens.isEmpty()) {
+        qDebug() << "Iniciando envio de" << filaDeMensagens.size() << "pacotes...";
+        timerFila->start(150); // Inicia o motor!
+    }
+}
+
+void SendData::process_data()
+{
+    if (filaDeMensagens.isEmpty()) {
+        timerFila->stop(); // Desliga o motor quando acabar
+        qDebug() << "Sincronização concluída com sucesso!";
+        return;
+    }
+
+    // Tira o próximo pacote da fila emanda para o Serial
+    QJsonObject pacote = filaDeMensagens.dequeue();
+    send_data(pacote);
 }

@@ -5,7 +5,7 @@ import QtQuick.Layouts 1.15
 ApplicationWindow {
     visible: true
     width: 750
-    height: 450
+    height: 550
     title: "Gerenciamento Ar Condicionado"
     color: "#f4f4f4"
 

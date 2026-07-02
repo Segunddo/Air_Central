@@ -6,6 +6,7 @@
 #include <QSerialPortInfo>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QQueue>
 #include <QDebug>
 #include <QJsonArray>
 #include <QFile>
@@ -20,6 +21,7 @@ public:
 
     void send_data(QJsonObject jsonCommand);
 
+    Q_INVOKABLE void sinc_esp_data();
     Q_INVOKABLE void send_command_status(QString idEsp, QString status);
     Q_INVOKABLE void send_command_temp(QString idEsp, QString temperatura);
     Q_INVOKABLE void requireEspsId();
@@ -30,7 +32,7 @@ signals:
     void errorOccurred(QString errorMessage);
 
 private slots:
-    void verificar_e_disparar_agendamentos();
+    void process_data();
 
 private:
     // NOVO: envia todos os códigos de um array em sequência com delay
@@ -40,8 +42,8 @@ private:
 
     QSerialPort *serial;
 
-    QTimer *timerAutomacao;
-    QString ultimaHoraDisparada;
+    QTimer *timerFila;
+    QQueue<QJsonObject> filaDeMensagens;
 };
 
 #endif // SENDDATA_H

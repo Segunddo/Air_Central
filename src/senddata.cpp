@@ -8,47 +8,28 @@ SendData::SendData(QSerialPort *portaSerial, QObject *parent)
     connect(timerFila, &QTimer::timeout, this, &SendData::process_data);
 }
 
-void SendData::send_all_codes(QJsonObject baseCommand, QJsonArray codigos)
-{
-    if (codigos.isEmpty()) {
-        qDebug() << "Nenhum código IR salvo para este comando.";
-        return;
-    }
-
-    for (int i = 0; i < codigos.size(); i++) {
-        QString codigo = codigos[i].toString();
-
-        QTimer::singleShot(i * 100, this, [this, baseCommand, codigo]() {
-            QJsonObject cmd = baseCommand;
-            cmd["code"] = codigo;
-            send_data(cmd);
-        });
-    }
-}
-
 void SendData::send_command_status(QString idEsp, QString status)
 {
-    QJsonObject baseCommand;
-    baseCommand["command"] = "Dispatch";
-    baseCommand["id"]      = idEsp;
-    baseCommand["status"]  = status;
+    QJsonObject cmd;
+    cmd["command"] = "Dispatch";
+    cmd["id"]      = idEsp;
+    cmd["status"]  = status;
 
-    QString chaveBusca = (status == "Ligado") ? "Ligar" : "Desligar";
-    QJsonArray codigos = get_codes_from_file(chaveBusca);
+    cmd["name"]    = (status == "Ligado") ? "Ligar" : "Desligar";
 
-    send_all_codes(baseCommand, codigos);
+    send_data(cmd);
 }
 
 void SendData::send_command_temp(QString idEsp, QString temperatura)
 {
-    QJsonObject baseCommand;
-    baseCommand["command"] = "Dispatch";
-    baseCommand["id"]      = idEsp;
-    baseCommand["temp"]    = temperatura;
+    QJsonObject cmd;
+    cmd["command"] = "Dispatch";
+    cmd["id"]      = idEsp;
+    cmd["temp"]    = temperatura;
 
-    QJsonArray codigos = get_codes_from_file(temperatura);
+    cmd["name"]    = temperatura;
 
-    send_all_codes(baseCommand, codigos);
+    send_data(cmd);
 }
 
 void SendData::require_espID_change(const QString idEsp, const QString newId)
@@ -92,56 +73,27 @@ void SendData::send_data(QJsonObject jsonCommand)
     }
 }
 
-QJsonArray SendData::get_codes_from_file(const QString& chave)
-{
-    QJsonArray arrayCodigos;
-    QFile file("codes.json");
-
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-        file.close();
-
-        if (!doc.isNull() && doc.isObject()) {
-            QJsonObject data = doc.object();
-            if (data.contains(chave)) {
-                arrayCodigos = data[chave].toArray();
-            }
-        }
-    } else {
-        qDebug() << "Erro: Nao foi possivel abrir codes.json para leitura.";
-    }
-
-    return arrayCodigos;
-}
-
 void SendData::sinc_esp_data()
 {
     filaDeMensagens.clear(); // Limpa qualquer envio que tenha ficado travado
 
     // ---------------------------------------------------------
-    // PASSO 1: Empacotar a Hora Atual
+    // PASSO 1: Empacotar a Hora Atual (Timestamp Unix)
     // ---------------------------------------------------------
     QJsonObject cmdTime;
     cmdTime["command"] = "Sync_Time";
 
-    QTime horaAtual = QTime::currentTime();
-    cmdTime["hora"]   = horaAtual.hour();
-    cmdTime["minuto"] = horaAtual.minute();
+    // Pega os segundos exatos no momento do clique
+    qint64 epochTime = QDateTime::currentSecsSinceEpoch();
+    cmdTime["timestamp"] = epochTime;
 
+    // Se a ESP ainda precisar da string do dia para facilitar a busca do agendamento,
+    // você pode manter, mas o Timestamp já contém essa informação matematicamente.
     int diaNumero = QDate::currentDate().dayOfWeek();
-    QString diaString;
-    switch(diaNumero) {
-    case 1: diaString = "Seg"; break;
-    case 2: diaString = "Ter"; break;
-    case 3: diaString = "Qua"; break;
-    case 4: diaString = "Qui"; break;
-    case 5: diaString = "Sex"; break;
-    case 6: diaString = "Sab"; break;
-    case 7: diaString = "Dom"; break;
-    }
-    cmdTime["dia"] = diaString;
+    QStringList dias = {"", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"};
+    cmdTime["dia"] = dias[diaNumero];
 
-    filaDeMensagens.enqueue(cmdTime); // Coloca o relógio como a 1ª coisa da fila
+    filaDeMensagens.enqueue(cmdTime);
 
     // ---------------------------------------------------------
     // PASSO 2: Empacotar os Agendamentos e Códigos

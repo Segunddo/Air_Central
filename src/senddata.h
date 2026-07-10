@@ -35,11 +35,6 @@ private slots:
     void process_data();
 
 private:
-    // NOVO: envia todos os códigos de um array em sequência com delay
-    void send_all_codes(QJsonObject baseCommand, QJsonArray codigos);
-
-    QJsonArray get_codes_from_file(const QString& chave);
-
     QSerialPort *serial;
 
     QTimer *timerFila;

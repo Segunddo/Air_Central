@@ -2,13 +2,16 @@
 
 // Inicialização dos objetos globais
 painlessMesh mesh;
-Preferences preferences;
+Scheduler userScheduler;
 IRsend irsend(IR_SEND_PIN);
 
-String myID; 
+std::vector<Agendamento> listaAgendamentos;
+
+String myID;
 bool powerStatus = false;
 int temperaturaAtual = 25;
 int temperaturaAlvo = 25;
+Task tarefaChecagem(5000, TASK_FOREVER, &checarAgendamentos);
 
 // =======================================================================
 // Envio de Status para a Central
@@ -52,7 +55,7 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
     mesh.sendSingle(nodeId_de_quem_enviou, respostaJSON);
   }
   
-  // --- TRATAMENTO: MUDANÇA DE ID ---
+  /// --- TRATAMENTO: MUDANÇA DE ID ---
   if (command == "Change_ID" && docBasico["id"] == myID) {
     String novoID = docBasico["new_id"].as<String>();
 
@@ -60,8 +63,12 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
         Serial.printf("Alterando ID de '%s' para '%s'\n", myID.c_str(), novoID.c_str());
         myID = novoID;
 
-        // Muda a nível de flash
-        preferences.putString("nodeID", myID);
+        // LÓGICA DE SALVAR O ID
+        File f = LittleFS.open("/nodeID.txt", "w");
+        if (f) {
+            f.print(myID);
+            f.close();
+        }
 
         // Confirma a mudança pra central
         JsonDocument docResposta;
@@ -111,13 +118,17 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
   // --- TRATAMENTO: LIMPAR MEMÓRIA ---
   if (command == "Clear_Memory" && docBasico["id"] == myID) {
       listaAgendamentos.clear(); 
-      mapaCodigosIR.clear(); // Limpa os códigos velhos também
-      Serial.println("Memória de agendamentos e códigos limpa.");
+      
+      // Varre a Flash e apaga todos os arquivos de códigos IR salvos
+      Dir dir = LittleFS.openDir("/");
+      while (dir.next()) {
+          LittleFS.remove(dir.fileName());
+      }
+      Serial.println("Memória RAM e arquivos da Flash foram limpos.");
   }
 
-  // --- TRATAMENTO: SALVAR CÓDIGO NOVO ---
+  // --- TRATAMENTO: SALVAR CÓDIGO NOVO NA FLASH ---
   if (command == "Add_Code" && docBasico["id"] == myID) {
-      // Como o Add_Code traz uma string muito longa, precisamos de um buffer maior
       JsonDocument docRaw; 
       DeserializationError erro = deserializeJson(docRaw, msg);
       
@@ -125,8 +136,15 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
           String nome = docRaw["name"].as<String>();
           String raw = docRaw["raw"].as<String>();
           
-          mapaCodigosIR[nome] = raw; // Salva no dicionário
-          Serial.printf("Código IR '%s' salvo na RAM.\n", nome.c_str());
+          // Cria um arquivo de texto com o nome do comando (ex: "/Ligar.txt")
+          File f = LittleFS.open("/" + nome + ".txt", "w");
+          if (f) {
+              f.print(raw); // Grava a string gigante na Flash
+              f.close();
+              Serial.printf("Código IR '%s' salvo no arquivo /%s.txt\n", nome.c_str(), nome.c_str());
+          } else {
+              Serial.println("Erro ao criar arquivo na Flash!");
+          }
       }
   }
 
@@ -149,21 +167,29 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
 }
 
 void dispararCodigoSalvo(String nomeCodigo) {
-  // Verifica se o código existe na memória
-  if (mapaCodigosIR.find(nomeCodigo) == mapaCodigosIR.end()) {
-    Serial.printf("Erro: O código '%s' não foi encontrado na memória!\n", nomeCodigo.c_str());
+  // Tenta abrir o arquivo na Flash
+  
+  String caminhoArquivo = "/" + nomeCodigo + ".txt";
+  File f = LittleFS.open(caminhoArquivo, "r");
+
+  if (!f) {
+    Serial.printf("Erro: Arquivo do código '%s' não encontrado na Flash!\n", nomeCodigo.c_str());
     return;
   }
 
-  // Pega a string gigante correspondente ao nome
-  const char* rawStr = mapaCodigosIR[nomeCodigo].c_str(); 
+  // Lê o arquivo inteiro para a RAM apenas no momento do disparo
+  String rawData = f.readString();
+  f.close();
+
+  // Pega o ponteiro da string
+  const char* rawStr = rawData.c_str(); 
   
   int count = 1;
   for (int i = 0; rawStr[i] != '\0'; i++) {
     if (rawStr[i] == ',') count++;
   }
 
-  uint16_t* pRaw = new (std::nothrow) uint16_t[count]; 
+  uint16_t* pRaw = new uint16_t[count];
   if (pRaw != nullptr) {
     int index = 0;
     int currentVal = 0;
@@ -181,66 +207,34 @@ void dispararCodigoSalvo(String nomeCodigo) {
     irsend.sendRaw(pRaw, count, 38);
     yield();
     delete[] pRaw;
-    Serial.printf("Disparo IR '%s' executado com sucesso!\n", nomeCodigo.c_str());
+    Serial.printf("Disparo IR '%s' executado a partir da Flash com sucesso!\n", nomeCodigo.c_str());
   } else {
-    Serial.println("ERRO CRÍTICO: Sem heap para o array IR!");
+    Serial.println("ERRO CRÍTICO: Sem heap para o array IR no momento do disparo!");
   }
 }
 
 void checarAgendamentos() {
-  time_t agora;
-  struct tm infoTempo;
-  
-  // Pega o tempo atual do sistema
-  time(&agora); 
-  // Quebra os segundos em horas, minutos, dias, etc.
-  localtime_r(&agora, &infoTempo); 
-
-  int horaAtual = infoTempo.tm_hour;
-  int minutoAtual = infoTempo.tm_min;
-  int diaDaSemana = infoTempo.tm_wday; // 0 = Domingo, 1 = Segunda...
-
-  // Aqui entra a sua lógica de comparar com os agendamentos salvos!
-  // printf("Hora atual: %02d:%02d\n", horaAtual, minutoAtual);
-}
-
-void taskChecadorDeTempo(void *pvParameters) {
-    // Array para converter o número do dia do sistema no formato do Qt
     const char* diasDaSemana[] = {"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"};
+    
+    time_t agora;
+    struct tm infoTempo;
+    time(&agora);
+    localtime_r(&agora, &infoTempo);
 
-    while (true) {
-        time_t agora;
-        struct tm infoTempo;
-        time(&agora);
-        localtime_r(&agora, &infoTempo);
+    int horaAtual = infoTempo.tm_hour;
+    int minutoAtual = infoTempo.tm_min;
+    String diaAtual = diasDaSemana[infoTempo.tm_wday];
 
-        int horaAtual = infoTempo.tm_hour;
-        int minutoAtual = infoTempo.tm_min;
-        String diaAtual = diasDaSemana[infoTempo.tm_wday];
-
-        // Percorre todos os agendamentos salvos na memória
-        for (auto &agenda : listaAgendamentos) {
-            
-            // Verifica se é o dia e a hora exata
-            if (agenda.diaDaSemana == diaAtual && agenda.hora == horaAtual && agenda.minuto == minutoAtual) {
-                
-                // Só dispara se ainda não tiver disparado neste minuto
-                if (!agenda.jaDisparou) {
-                    Serial.printf("Hora de disparar! Código: %s\n", agenda.nomeCodigo.c_str());
-                    
-                    // AQUI VOCÊ CHAMA A SUA FUNÇÃO QUE BUSCA O RAW NA PREFERENCES E DISPARA O IR
-                    // dispararCodigoSalvo(agenda.nomeCodigo); 
-
-                    agenda.jaDisparou = true; // Trava para não disparar de novo
-                }
-            } else {
-                // Se o tempo já passou (o minuto virou), destrava para o próximo dia/semana
-                agenda.jaDisparou = false; 
+    for (auto &agenda : listaAgendamentos) {
+        if (agenda.diaDaSemana == diaAtual && agenda.hora == horaAtual && agenda.minuto == minutoAtual) {
+            if (!agenda.jaDisparou) {
+                Serial.printf("Hora de disparar! Código: %s\n", agenda.nomeCodigo.c_str());
+                dispararCodigoSalvo(agenda.nomeCodigo); 
+                agenda.jaDisparou = true; 
             }
+        } else {
+            agenda.jaDisparou = false; 
         }
-
-        // Manda a Task dormir por 5 segundos para liberar o processador para a Mesh
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -248,16 +242,31 @@ void taskChecadorDeTempo(void *pvParameters) {
 // Ciclo de Vida do Microcontrolador
 // =======================================================================
 void setup() {
-  preferences.begin("config", false);
-  myID = preferences.getString("nodeID", "CI000");
-
   Serial.begin(115200);
-  mesh.init(MESH_PREFIX, MESH_PASSWORD, MESH_PORT);
+
+  // Inicializa o LittleFS
+  if (!LittleFS.begin()) {
+      Serial.println("Formatando a memória Flash pela primeira vez...");
+      LittleFS.format();
+      LittleFS.begin();
+  }
+
+  // LÓGICA DE LER O ID
+  if (LittleFS.exists("/nodeID.txt")) {
+      File f = LittleFS.open("/nodeID.txt", "r");
+      myID = f.readString();
+      f.close();
+  } else {
+      myID = "CI000"; // Se o arquivo não existir, assume o ID padrão
+  }
+
+  mesh.init(MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT);
   mesh.setDebugMsgTypes(0);
   irsend.begin();
   mesh.onReceive(&mensagensRecebidas);
 
-  xTaskCreate(taskChecadorDeTempo, "ChecaTempo", 4096, NULL, 1, NULL);
+  userScheduler.addTask(tarefaChecagem);
+  tarefaChecagem.enable();
 }
 
 void loop() {

@@ -6,10 +6,9 @@
 #include <ArduinoJson.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
-#include <Preferences.h>
 #include <sys/time.h>
 #include <vector>
-#include <map>
+#include <LittleFS.h>
 
 // ==========================================
 // Configurações da Rede Mesh
@@ -29,8 +28,7 @@
 void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg);
 void enviarStatusCentral();
 void checarAgendamentos();
-void taskChecadorDeTempo(void *pvParameters);
-void dispararCodigoSalvo(String nomeCodigo)
+void dispararCodigoSalvo(String nomeCodigo);
 
 // ==========================================
 // Variáveis
@@ -42,8 +40,5 @@ struct Agendamento {
     String nomeCodigo;  // Ex: "Ligar", "22C"
     bool jaDisparou;    // A trava de segurança!
 };
-
-std::vector<Agendamento> listaAgendamentos;
-std::map<String, String> mapaCodigosIR;
 
 #endif // NODE_H

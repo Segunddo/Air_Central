@@ -1,0 +1,205 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-6d24d2c11f0568ecff5f.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "Central_Ar_Condicionado",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "all_aotstats::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-all_aotstats-Debug-1b7d7e963cd1a6f23188.json",
+					"name" : "all_aotstats",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "all_qmllint::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-all_qmllint-Debug-94381d939451e66224f8.json",
+					"name" : "all_qmllint",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "all_qmllint_json::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-all_qmllint_json-Debug-938e258cab89febca7f8.json",
+					"name" : "all_qmllint_json",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "all_qmllint_module::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-all_qmllint_module-Debug-eac2c1d7cc6799f7d123.json",
+					"name" : "all_qmllint_module",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "all_qmltyperegistrations::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-all_qmltyperegistrations-Debug-7ce8136dd616511a7912.json",
+					"name" : "all_qmltyperegistrations",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado-Debug-6e11ade4b5b5896ad09b.json",
+					"name" : "appCentral_Ar_Condicionado",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_autogen-Debug-e9d10e844461a1306024.json",
+					"name" : "appCentral_Ar_Condicionado_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_autogen_timestamp_deps-Debug-f342ef97305f07ad377d.json",
+					"name" : "appCentral_Ar_Condicionado_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_copy_qml::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_copy_qml-Debug-f36d4421ceeb247f0199.json",
+					"name" : "appCentral_Ar_Condicionado_copy_qml",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_copy_res::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_copy_res-Debug-ee8d619ceb8cd43ff8da.json",
+					"name" : "appCentral_Ar_Condicionado_copy_res",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_qmlimportscan::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_qmlimportscan-Debug-a567f275f16bcd5821c5.json",
+					"name" : "appCentral_Ar_Condicionado_qmlimportscan",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_qmllint::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_qmllint-Debug-3feadf9ff351eb57ff34.json",
+					"name" : "appCentral_Ar_Condicionado_qmllint",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_qmllint_json::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_qmllint_json-Debug-2121685df210c3da950b.json",
+					"name" : "appCentral_Ar_Condicionado_qmllint_json",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_qmllint_module::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_qmllint_module-Debug-719536881dea0520ba84.json",
+					"name" : "appCentral_Ar_Condicionado_qmllint_module",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "appCentral_Ar_Condicionado_qmltyperegistration::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-appCentral_Ar_Condicionado_qmltyperegistration-Debug-7a20aa44790aeb8cf5a9.json",
+					"name" : "appCentral_Ar_Condicionado_qmltyperegistration",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "generate_qmlls_build_ini_file::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-generate_qmlls_build_ini_file-Debug-483ad56420c0f9cf8da0.json",
+					"name" : "generate_qmlls_build_ini_file",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "module_appCentral_Ar_Condicionado_aotstats_target::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-module_appCentral_Ar_Condicionado_aotstats_target-Debug-dfb92d552b4e8287de9f.json",
+					"name" : "module_appCentral_Ar_Condicionado_aotstats_target",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/seg/Codes/Air_Central/build/Desktop_Qt_6_10_3-Debug",
+		"source" : "/home/seg/Codes/Air_Central"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

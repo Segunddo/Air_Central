@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="/qt/qml/Central_Ar_Condicionado/">
+    <file alias="Main.qml">/home/seg/Codes/Air_Central/Main.qml</file>
+    <file alias="TelaLista.qml">/home/seg/Codes/Air_Central/TelaLista.qml</file>
+    <file alias="TelaCadastro.qml">/home/seg/Codes/Air_Central/TelaCadastro.qml</file>
+  </qresource>
+</RCC>
+

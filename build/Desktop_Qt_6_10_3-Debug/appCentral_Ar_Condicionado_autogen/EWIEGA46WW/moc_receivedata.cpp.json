@@ -1,0 +1,90 @@
+{
+    "classes": [
+        {
+            "className": "ReceiveData",
+            "lineNumber": 15,
+            "methods": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "nomePorta",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 4,
+                    "lineNumber": 24,
+                    "name": "conectar",
+                    "returnType": "bool"
+                },
+                {
+                    "access": "public",
+                    "index": 5,
+                    "lineNumber": 26,
+                    "name": "list_ports",
+                    "returnType": "QStringList"
+                }
+            ],
+            "object": true,
+            "qualifiedClassName": "ReceiveData",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "idEsp",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 32,
+                    "name": "newDeviceDetected",
+                    "returnType": "void"
+                }
+            ],
+            "slots": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "commandType",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 29,
+                    "name": "set_waited_command",
+                    "returnType": "void"
+                },
+                {
+                    "access": "private",
+                    "index": 2,
+                    "lineNumber": 35,
+                    "name": "read_data",
+                    "returnType": "void"
+                },
+                {
+                    "access": "private",
+                    "arguments": [
+                        {
+                            "name": "obj",
+                            "type": "QJsonObject"
+                        }
+                    ],
+                    "index": 3,
+                    "lineNumber": 36,
+                    "name": "decode_data",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "receivedata.h",
+    "outputRevision": 69
+}

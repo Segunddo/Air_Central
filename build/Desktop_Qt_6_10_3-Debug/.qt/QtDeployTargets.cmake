@@ -1,0 +1,2 @@
+set(__QT_DEPLOY_TARGET_appCentral_Ar_Condicionado_FILE /home/seg/Codes/Air_Central/build/Desktop_Qt_6_10_3-Debug/appCentral_Ar_Condicionado)
+set(__QT_DEPLOY_TARGET_appCentral_Ar_Condicionado_TYPE EXECUTABLE)

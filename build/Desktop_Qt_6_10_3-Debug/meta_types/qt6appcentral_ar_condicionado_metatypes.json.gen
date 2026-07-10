@@ -1,0 +1,254 @@
+[
+    {
+        "classes": [
+            {
+                "className": "ReceiveData",
+                "lineNumber": 15,
+                "methods": [
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "nomePorta",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 4,
+                        "lineNumber": 24,
+                        "name": "conectar",
+                        "returnType": "bool"
+                    },
+                    {
+                        "access": "public",
+                        "index": 5,
+                        "lineNumber": 26,
+                        "name": "list_ports",
+                        "returnType": "QStringList"
+                    }
+                ],
+                "object": true,
+                "qualifiedClassName": "ReceiveData",
+                "signals": [
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "idEsp",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 0,
+                        "lineNumber": 32,
+                        "name": "newDeviceDetected",
+                        "returnType": "void"
+                    }
+                ],
+                "slots": [
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "commandType",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 1,
+                        "lineNumber": 29,
+                        "name": "set_waited_command",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "private",
+                        "index": 2,
+                        "lineNumber": 35,
+                        "name": "read_data",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "private",
+                        "arguments": [
+                            {
+                                "name": "obj",
+                                "type": "QJsonObject"
+                            }
+                        ],
+                        "index": 3,
+                        "lineNumber": 36,
+                        "name": "decode_data",
+                        "returnType": "void"
+                    }
+                ],
+                "superClasses": [
+                    {
+                        "access": "public",
+                        "name": "QObject"
+                    }
+                ]
+            }
+        ],
+        "inputFile": "receivedata.h",
+        "outputRevision": 69
+    },
+    {
+        "classes": [
+            {
+                "className": "SaveData",
+                "lineNumber": 11,
+                "methods": [
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "comando",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 1,
+                        "lineNumber": 20,
+                        "name": "delete_data",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "public",
+                        "index": 2,
+                        "lineNumber": 22,
+                        "name": "delete_all_data",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "comando",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 3,
+                        "lineNumber": 24,
+                        "name": "get_command_count",
+                        "returnType": "int"
+                    }
+                ],
+                "object": true,
+                "qualifiedClassName": "SaveData",
+                "signals": [
+                    {
+                        "access": "public",
+                        "index": 0,
+                        "lineNumber": 27,
+                        "name": "codes_size_changed",
+                        "returnType": "void"
+                    }
+                ],
+                "superClasses": [
+                    {
+                        "access": "public",
+                        "name": "QObject"
+                    }
+                ]
+            }
+        ],
+        "inputFile": "savedata.h",
+        "outputRevision": 69
+    },
+    {
+        "classes": [
+            {
+                "className": "SendData",
+                "lineNumber": 14,
+                "methods": [
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "idEsp",
+                                "type": "QString"
+                            },
+                            {
+                                "name": "status",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 1,
+                        "lineNumber": 22,
+                        "name": "send_command_status",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "idEsp",
+                                "type": "QString"
+                            },
+                            {
+                                "name": "temperatura",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 2,
+                        "lineNumber": 23,
+                        "name": "send_command_temp",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "public",
+                        "index": 3,
+                        "lineNumber": 24,
+                        "name": "requireEspsId",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "public",
+                        "index": 4,
+                        "lineNumber": 25,
+                        "name": "require_ir_read",
+                        "returnType": "void"
+                    },
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "idEsp",
+                                "type": "QString"
+                            },
+                            {
+                                "name": "newId",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 5,
+                        "lineNumber": 26,
+                        "name": "require_espID_change",
+                        "returnType": "void"
+                    }
+                ],
+                "object": true,
+                "qualifiedClassName": "SendData",
+                "signals": [
+                    {
+                        "access": "public",
+                        "arguments": [
+                            {
+                                "name": "errorMessage",
+                                "type": "QString"
+                            }
+                        ],
+                        "index": 0,
+                        "lineNumber": 30,
+                        "name": "errorOccurred",
+                        "returnType": "void"
+                    }
+                ],
+                "superClasses": [
+                    {
+                        "access": "public",
+                        "name": "QObject"
+                    }
+                ]
+            }
+        ],
+        "inputFile": "senddata.h",
+        "outputRevision": 69
+    }
+]

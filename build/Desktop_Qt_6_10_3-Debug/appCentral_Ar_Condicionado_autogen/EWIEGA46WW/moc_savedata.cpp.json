@@ -1,0 +1,62 @@
+{
+    "classes": [
+        {
+            "className": "SaveData",
+            "lineNumber": 11,
+            "methods": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "comando",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 20,
+                    "name": "delete_data",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "lineNumber": 22,
+                    "name": "delete_all_data",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "comando",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 3,
+                    "lineNumber": 24,
+                    "name": "get_command_count",
+                    "returnType": "int"
+                }
+            ],
+            "object": true,
+            "qualifiedClassName": "SaveData",
+            "signals": [
+                {
+                    "access": "public",
+                    "index": 0,
+                    "lineNumber": 27,
+                    "name": "codes_size_changed",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "savedata.h",
+    "outputRevision": 69
+}

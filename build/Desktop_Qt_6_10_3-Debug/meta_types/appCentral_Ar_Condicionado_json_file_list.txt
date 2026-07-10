@@ -1,0 +1,3 @@
+/home/seg/Codes/Air_Central/build/Desktop_Qt_6_10_3-Debug/appCentral_Ar_Condicionado_autogen/include/../EWIEGA46WW/moc_receivedata.cpp.json
+/home/seg/Codes/Air_Central/build/Desktop_Qt_6_10_3-Debug/appCentral_Ar_Condicionado_autogen/include/../EWIEGA46WW/moc_savedata.cpp.json
+/home/seg/Codes/Air_Central/build/Desktop_Qt_6_10_3-Debug/appCentral_Ar_Condicionado_autogen/include/../EWIEGA46WW/moc_senddata.cpp.json

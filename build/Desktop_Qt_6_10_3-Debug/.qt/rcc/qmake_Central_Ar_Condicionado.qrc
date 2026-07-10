@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/qt/qml/Central_Ar_Condicionado">
-    <file alias="qmldir">/home/seg/Codes/Air_Central/build/Desktop_Qt_6_10_3-Debug/Central_Ar_Condicionado/qmldir</file>
-  </qresource>
-</RCC>
-

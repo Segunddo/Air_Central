@@ -1,8 +1,0 @@
-module Central_Ar_Condicionado
-typeinfo appCentral_Ar_Condicionado.qmltypes
-prefer :/qt/qml/Central_Ar_Condicionado/
-Main 1.0 Main.qml
-TelaLista 1.0 TelaLista.qml
-TelaCadastro 1.0 TelaCadastro.qml
-depends QtQuick
-

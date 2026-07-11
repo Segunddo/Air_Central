@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <vector>
 #include <LittleFS.h>
+#include <New>
 
 // ==========================================
 // Configurações da Rede Mesh
@@ -29,17 +30,17 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg);
 void enviarStatusCentral();
 void checarAgendamentos();
 void dispararCodigoSalvo(String nomeCodigo);
-void dispararStringRaw(String rawData);
+void dispararStringRaw(const char* rawStr);
 
 // ==========================================
 // Variáveis
 // ==========================================
 struct Agendamento {
-    String diaDaSemana;
-    int hora;
-    int minuto;
-    String nomeCodigo;  // Ex: "Ligar", "22C"
-    bool jaDisparou;    // A trava de segurança!
+    int8_t diaDaSemana; // 0 = Dom, 1 = Seg, 2 = Ter... até 6 = Sab
+    int8_t hora;        // 0 a 23
+    int8_t minuto;      // 0 a 59
+    String nomeCodigo;  // O nome do arquivo na Flash (Ex: "Ligar")
+    bool jaDisparou;    // Trava para não atirar 60 vezes no mesmo minuto
 };
 
 #endif // NODE_H

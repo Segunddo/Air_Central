@@ -60,7 +60,7 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
     mesh.sendSingle(nodeId_de_quem_enviou, respostaJSON);
   }
   
-  /// --- TRATAMENTO: MUDANÇA DE ID ---
+  // --- TRATAMENTO: MUDANÇA DE ID ---
   if (command == "Change_ID" && docBasico["id"] == myID) {
     String novoID = docBasico["new_id"].as<String>();
 
@@ -101,22 +101,20 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
 
   // --- TRATAMENTO: RECEBER AGENDAMENTO ---
   if (command == "Add_Schedule" && docBasico["id"] == myID) {
-      String diaStr = docBasico["dia"].as<String>();
-      String horaStr = docBasico["hora"].as<String>(); // Ex: "14:30"
+      int8_t diaNum = docBasico["dia"].as<int>(); // Qt manda 1 para Segunda
+      String horaStr = docBasico["hora"].as<String>();
       String codigo = docBasico["code"].as<String>();
 
-      // Quebra a string "14:30" no caractere ":"
       int separador = horaStr.indexOf(':');
       if (separador != -1) {
-          int h = horaStr.substring(0, separador).toInt();
-          int m = horaStr.substring(separador + 1).toInt();
+          int8_t h = horaStr.substring(0, separador).toInt();
+          int8_t m = horaStr.substring(separador + 1).toInt();
 
-          // Cria a estrutura e joga na lista
-          Agendamento novoAgendamento = {diaStr, h, m, codigo, false};
+          Agendamento novoAgendamento = {diaNum, h, m, codigo, false};
           listaAgendamentos.push_back(novoAgendamento);
 
-          Serial.printf("Agendamento salvo: %s às %02d:%02d para código %s\n", 
-                        diaStr.c_str(), h, m, codigo.c_str());
+          Serial.printf("Agendamento salvo: Dia %d às %02d:%02d para código %s\n", 
+                        diaNum, h, m, codigo.c_str());
       }
   }
 
@@ -160,19 +158,17 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
     }
 }
 
-  // --- TRATAMENTO: DISPARO MANUAL (ATUALIZADO) ---
-  // --- TRATAMENTO: DISPARO MANUAL (ATUALIZADO) ---
+  // --- TRATAMENTO: DISPARO MANUAL ---
   if (command == "Dispatch" && docBasico["id"] == myID) {
       JsonDocument docRaw;
       deserializeJson(docRaw, msg);
 
       if (docRaw.containsKey("raw")) {
-          String rawString = docRaw["raw"].as<String>();
+          const char* rawStr = docRaw["raw"];
           
-          // 👇 DEBUG AQUI: Confirma que recebeu a string gigante pela rede
-          Serial.printf("[DEBUG ESP] Recebido comando manual pela rede. Tamanho da string: %d caracteres.\n", rawString.length());
+          Serial.printf("[DEBUG ESP] Recebido comando manual pela rede. Tamanho da string: %d caracteres.\n", strlen(rawStr));
           
-          dispararStringRaw(rawString);
+          dispararStringRaw(rawStr);
       } 
       else if (docRaw.containsKey("name")) {
           String nomeComando = docRaw["name"].as<String>();
@@ -189,18 +185,17 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
   }
 }
 
-void dispararStringRaw(String rawData) {
-  const char* rawStr = rawData.c_str(); 
-  
+void dispararStringRaw(const char* rawStr) { 
   int count = 1;
   for (int i = 0; rawStr[i] != '\0'; i++) {
     if (rawStr[i] == ',') count++;
   }
 
-  // 👇 DEBUG AQUI: Verifica se contou os números corretamente
   Serial.printf("[DEBUG ESP] Preparando para atirar... Array IR com %d posições.\n", count);
 
+  // Restaurando a proteção do código antigo para não resetar o chip caso a RAM falte
   uint16_t* pRaw = new uint16_t[count];
+  
   if (pRaw != nullptr) {
     int index = 0;
     int currentVal = 0;
@@ -219,7 +214,6 @@ void dispararStringRaw(String rawData) {
     yield();
     delete[] pRaw;
     
-    // 👇 DEBUG AQUI: Confirma que não travou e o LED piscou
     Serial.println("[DEBUG ESP] POU! Disparo IR executado com sucesso!");
   } else {
     Serial.println("[DEBUG ESP] ERRO CRÍTICO: Sem heap para o array IR!");
@@ -243,7 +237,7 @@ void dispararCodigoSalvo(String nomeCodigo) {
     linhaRaw.trim(); // Remove quebras de linha invisíveis (\r)
     
     if (linhaRaw.length() > 0) {
-      dispararStringRaw(linhaRaw);
+      dispararStringRaw(linhaRaw.c_str());
       
       // O mesmo delay de 250ms que colocamos no Qt!
       // Usamos delay() pois ele já chama yield() internamente no ESP8266
@@ -256,16 +250,19 @@ void dispararCodigoSalvo(String nomeCodigo) {
 }
 
 void checarAgendamentos() {
-    const char* diasDaSemana[] = {"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"};
-    
     time_t agora;
     struct tm infoTempo;
     time(&agora);
-    localtime_r(&agora, &infoTempo);
+    localtime_r(&agora, &infoTempo); // O RTC Virtual te dá os dados mastigados!
 
-    int horaAtual = infoTempo.tm_hour;
-    int minutoAtual = infoTempo.tm_min;
-    String diaAtual = diasDaSemana[infoTempo.tm_wday];
+    // Se o ano for 1970 (menor que 2000), o relógio ainda não foi sincronizado pelo Qt
+    if (infoTempo.tm_year + 1900 < 2000) {
+        return; // Sai da função e não faz nada, evitando disparos errados
+    }
+
+    int8_t horaAtual = infoTempo.tm_hour;
+    int8_t minutoAtual = infoTempo.tm_min;
+    int8_t diaAtual = infoTempo.tm_wday; // Retorna de 0 (Dom) a 6 (Sab)
 
     for (auto &agenda : listaAgendamentos) {
         if (agenda.diaDaSemana == diaAtual && agenda.hora == horaAtual && agenda.minuto == minutoAtual) {
@@ -275,6 +272,7 @@ void checarAgendamentos() {
                 agenda.jaDisparou = true; 
             }
         } else {
+            // Se o minuto virou ou o dia mudou, destrava para a próxima vez
             agenda.jaDisparou = false; 
         }
     }

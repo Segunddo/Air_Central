@@ -22,7 +22,7 @@ void mensagemRecebidaDoQt() {
     mensagemQt.trim();
     
     if (mensagemQt.length() > 0) {
-      DynamicJsonDocument doc(512);
+      DynamicJsonDocument doc(2048);
       DeserializationError error = deserializeJson(doc, mensagemQt);
       
       if (!error) {

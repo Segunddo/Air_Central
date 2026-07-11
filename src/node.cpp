@@ -35,9 +35,14 @@ void enviarStatusCentral() {
 // =======================================================================
 void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
   JsonDocument filter;
-  filter["command"] = true;
-  filter["id"] = true;
-  filter["new_id"]  = true;
+  filter["command"]   = true;
+  filter["id"]        = true;
+  filter["new_id"]    = true;
+  
+  filter["timestamp"] = true; 
+  filter["dia"]       = true;
+  filter["hora"]      = true;
+  filter["code"]      = true;
 
   JsonDocument docBasico;
   deserializeJson(docBasico, msg, DeserializationOption::Filter(filter));
@@ -129,34 +134,52 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
 
   // --- TRATAMENTO: SALVAR CÓDIGO NOVO NA FLASH ---
   if (command == "Add_Code" && docBasico["id"] == myID) {
-      JsonDocument docRaw; 
-      DeserializationError erro = deserializeJson(docRaw, msg);
+    JsonDocument docRaw; // Se usar ArduinoJson v6, use DynamicJsonDocument docRaw(2048);
+    DeserializationError erro = deserializeJson(docRaw, msg);
       
-      if (!erro && docRaw.containsKey("name") && docRaw.containsKey("raw")) {
-          String nome = docRaw["name"].as<String>();
-          String raw = docRaw["raw"].as<String>();
-          
-          // Cria um arquivo de texto com o nome do comando (ex: "/Ligar.txt")
-          File f = LittleFS.open("/" + nome + ".txt", "w");
-          if (f) {
-              f.print(raw); // Grava a string gigante na Flash
-              f.close();
-              Serial.printf("Código IR '%s' salvo no arquivo /%s.txt\n", nome.c_str(), nome.c_str());
-          } else {
-              Serial.println("Erro ao criar arquivo na Flash!");
-          }
-      }
-  }
+    if (!erro) {
+        if (docRaw.containsKey("name") && docRaw.containsKey("raw")) {
+            String nome = docRaw["name"].as<String>();
+            String raw = docRaw["raw"].as<String>();
+              
+            File f = LittleFS.open("/" + nome + ".txt", "w");
+            if (f) {
+                f.print(raw);
+                f.close();
+                Serial.printf("Código IR '%s' salvo no arquivo /%s.txt\n", nome.c_str(), nome.c_str());
+            } else {
+                Serial.println("Erro ao criar arquivo na Flash!");
+            }
+        } else {
+            Serial.println("Erro: JSON recebido não possui 'name' ou 'raw'.");
+        }
+    } else {
+        // Isso vai te mostrar exatamente se o JSON está chegando quebrado!
+        Serial.print("Falha ao ler JSON gigante do Add_Code: ");
+        Serial.println(erro.c_str()); 
+    }
+}
 
+  // --- TRATAMENTO: DISPARO MANUAL (ATUALIZADO) ---
   // --- TRATAMENTO: DISPARO MANUAL (ATUALIZADO) ---
   if (command == "Dispatch" && docBasico["id"] == myID) {
       JsonDocument docRaw;
       deserializeJson(docRaw, msg);
 
-      // Agora a ESP só espera receber o NOME do código (ex: "Ligar")
-      if (docRaw.containsKey("name")) {
+      if (docRaw.containsKey("raw")) {
+          String rawString = docRaw["raw"].as<String>();
+          
+          // 👇 DEBUG AQUI: Confirma que recebeu a string gigante pela rede
+          Serial.printf("[DEBUG ESP] Recebido comando manual pela rede. Tamanho da string: %d caracteres.\n", rawString.length());
+          
+          dispararStringRaw(rawString);
+      } 
+      else if (docRaw.containsKey("name")) {
           String nomeComando = docRaw["name"].as<String>();
+          Serial.printf("[DEBUG ESP] Disparo pela Flash solicitado. Arquivo: %s\n", nomeComando.c_str());
           dispararCodigoSalvo(nomeComando);
+      } else {
+          Serial.println("[DEBUG ESP] Comando 'Dispatch' recebido, mas não havia 'raw' nem 'name'.");
       }
 
       if (docRaw.containsKey("status")) powerStatus = (docRaw["status"] == "Ligado");
@@ -166,28 +189,16 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
   }
 }
 
-void dispararCodigoSalvo(String nomeCodigo) {
-  // Tenta abrir o arquivo na Flash
-  
-  String caminhoArquivo = "/" + nomeCodigo + ".txt";
-  File f = LittleFS.open(caminhoArquivo, "r");
-
-  if (!f) {
-    Serial.printf("Erro: Arquivo do código '%s' não encontrado na Flash!\n", nomeCodigo.c_str());
-    return;
-  }
-
-  // Lê o arquivo inteiro para a RAM apenas no momento do disparo
-  String rawData = f.readString();
-  f.close();
-
-  // Pega o ponteiro da string
+void dispararStringRaw(String rawData) {
   const char* rawStr = rawData.c_str(); 
   
   int count = 1;
   for (int i = 0; rawStr[i] != '\0'; i++) {
     if (rawStr[i] == ',') count++;
   }
+
+  // 👇 DEBUG AQUI: Verifica se contou os números corretamente
+  Serial.printf("[DEBUG ESP] Preparando para atirar... Array IR com %d posições.\n", count);
 
   uint16_t* pRaw = new uint16_t[count];
   if (pRaw != nullptr) {
@@ -207,10 +218,41 @@ void dispararCodigoSalvo(String nomeCodigo) {
     irsend.sendRaw(pRaw, count, 38);
     yield();
     delete[] pRaw;
-    Serial.printf("Disparo IR '%s' executado a partir da Flash com sucesso!\n", nomeCodigo.c_str());
+    
+    // 👇 DEBUG AQUI: Confirma que não travou e o LED piscou
+    Serial.println("[DEBUG ESP] POU! Disparo IR executado com sucesso!");
   } else {
-    Serial.println("ERRO CRÍTICO: Sem heap para o array IR no momento do disparo!");
+    Serial.println("[DEBUG ESP] ERRO CRÍTICO: Sem heap para o array IR!");
   }
+}
+
+void dispararCodigoSalvo(String nomeCodigo) {
+  String caminhoArquivo = "/" + nomeCodigo + ".txt";
+  File f = LittleFS.open(caminhoArquivo, "r");
+
+  if (!f) {
+    Serial.printf("[DEBUG ESP] Erro: Arquivo '%s' não encontrado na Flash!\n", caminhoArquivo.c_str());
+    return;
+  }
+
+  Serial.printf("[DEBUG ESP] Iniciando disparo do agendamento: %s\n", caminhoArquivo.c_str());
+
+  // Lê o arquivo linha por linha em vez de carregar tudo de uma vez para a RAM
+  while (f.available()) {
+    String linhaRaw = f.readStringUntil('\n');
+    linhaRaw.trim(); // Remove quebras de linha invisíveis (\r)
+    
+    if (linhaRaw.length() > 0) {
+      dispararStringRaw(linhaRaw);
+      
+      // O mesmo delay de 250ms que colocamos no Qt!
+      // Usamos delay() pois ele já chama yield() internamente no ESP8266
+      delay(250); 
+    }
+  }
+  
+  f.close();
+  Serial.println("[DEBUG ESP] Sequência de disparo do agendamento finalizada!");
 }
 
 void checarAgendamentos() {
@@ -242,6 +284,7 @@ void checarAgendamentos() {
 // Ciclo de Vida do Microcontrolador
 // =======================================================================
 void setup() {
+  Serial.setRxBufferSize(2048);
   Serial.begin(115200);
 
   // Inicializa o LittleFS

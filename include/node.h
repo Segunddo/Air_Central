@@ -29,6 +29,7 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg);
 void enviarStatusCentral();
 void checarAgendamentos();
 void dispararCodigoSalvo(String nomeCodigo);
+void dispararStringRaw(String rawData);
 
 // ==========================================
 // Variáveis

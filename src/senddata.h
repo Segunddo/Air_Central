@@ -30,6 +30,9 @@ public:
 
 signals:
     void errorOccurred(QString errorMessage);
+    void syncStarted(int totalPacotes);
+    void syncProgress(int pacotesRestantes);
+    void syncFinished();
 
 private slots:
     void process_data();

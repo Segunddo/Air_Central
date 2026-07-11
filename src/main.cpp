@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QIcon>
 
 #include "receivedata.h"
 #include "senddata.h"
@@ -12,7 +13,7 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
     QGuiApplication app(argc, argv);
-
+    app.setWindowIcon(QIcon(":/qt/qml/Central_Ar_Condicionado/qml/icon.svg"));
     QQuickStyle::setStyle("Basic");
 
     // 1. Instanciamos apenas as classes que conversam com a Interface

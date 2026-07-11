@@ -6,8 +6,15 @@ ApplicationWindow {
     visible: true
     width: 750
     height: 550
-    title: "Gerenciamento Ar Condicionado"
+    title: "Central"
     color: "#f4f4f4"
+
+    Image {
+            source: "icone_ar.svg"
+            width: 40
+            height: 40
+            fillMode: Image.PreserveAspectFit
+    }
 
     StackView {
         id: stackView

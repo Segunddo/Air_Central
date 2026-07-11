@@ -23,6 +23,8 @@ qt_add_qml_module(appCentral_Ar_Condicionado
         qml/Main.qml
         qml/TelaLista.qml
         qml/TelaCadastro.qml
+    RESOURCES
+            qml/icon.svg
     SOURCES
         src/receivedata.h src/receivedata.cpp
         src/senddata.h src/senddata.cpp

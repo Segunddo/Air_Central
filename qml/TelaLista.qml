@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtQuick.Effects
 
 Item {
     id: telaListaPrincipal
@@ -60,6 +61,56 @@ Item {
             })
         }
     }
+
+    // ==========================================
+        // TELA DE CARREGAMENTO (Sincronização)
+        // ==========================================
+        Popup {
+            id: telaCarregamento
+            anchors.centerIn: parent
+            width: 300
+            height: 120
+            modal: true
+            closePolicy: Popup.NoAutoClose
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 20
+
+                Text {
+                    text: "Sincronizando a Malha Mesh..."
+                    font.pixelSize: 16
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                ProgressBar {
+                    id: barraProgresso
+                    width: 250
+                    from: 0
+                    to: 100
+                    value: 0
+                }
+            }
+
+            // A conexão fica DENTRO do Popup para garantir que ela enxergue a barra!
+            Connections {
+                target: sendData
+
+                function onSyncStarted(totalPacotes) {
+                    barraProgresso.to = totalPacotes
+                    barraProgresso.value = 0
+                    telaCarregamento.open()
+                }
+
+                function onSyncProgress(pacotesRestantes) {
+                    barraProgresso.value = barraProgresso.to - pacotesRestantes
+                }
+
+                function onSyncFinished() {
+                    telaCarregamento.close()
+                }
+            }
+        }
 
     // ==========================================
     // POPUP DE AGENDAMENTO
@@ -376,22 +427,6 @@ Item {
                             }
                         }
 
-                        // --- NOVO BOTÃO DE SINCRONIZAR TUDO ---
-                        Button {
-                            text: "📡 Sinc."
-                            Layout.preferredWidth: 90; Layout.preferredHeight: 42
-                            font.pixelSize: 13; font.bold: true
-                            contentItem: Text { text: parent.text; font: parent.font; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                            background: Rectangle { color: parent.pressed ? "#2563eb" : "#3b82f6"; radius: 10 } // Cor azul para destacar ação de rede
-                            onClicked: {
-                                console.log("Iniciando envio da fila de sincronização para as ESPs...")
-                                if (typeof sendData !== "undefined") {
-                                    sendData.sinc_esp_data()
-                                }
-                            }
-                        }
-                        // --------------------------------------
-
                         // Botão Códigos IR
                         Button {
                             text: "⚙️ Códigos IR"
@@ -526,5 +561,71 @@ Item {
                 }
             }
         }
+
+        // ==========================================
+        // BOTÃO FLUTUANTE DE SINCRONIZAÇÃO (FAB)
+        // ==========================================
+        Button {
+            id: fabSync
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 30
+            width: 65
+            height: 65
+            z: 10
+            hoverEnabled: true
+
+            ToolTip {
+                id: dicaFab
+                visible: parent.hovered
+                delay: 500
+                text: "Enviar os horários programados"
+
+                topPadding: 8
+                bottomPadding: 8
+                leftPadding: 12
+                rightPadding: 12
+
+                contentItem: Text {
+                    text: dicaFab.text
+                    color: "#ffffff"
+                    font.bold: true
+                    font.pixelSize: 12
+                }
+                background: Rectangle {
+                    color: "#1e293b"
+                    radius: 6
+                }
+            }
+
+            background: Rectangle {
+                color: fabSync.pressed ? "#16a34a" : "#22c55e"
+                radius: width / 2
+
+                layer.enabled: true
+                layer.effect: MultiEffect {
+                    shadowEnabled: true
+                    shadowColor: "#40000000"
+                    shadowBlur: 0.8
+                    shadowVerticalOffset: 4
+                }
+            }
+
+            contentItem: Text {
+                text: "⏱"
+                font.pixelSize: 28
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                console.log("Iniciando envio dos horários programados...")
+                if (typeof sendData !== "undefined") {
+                    sendData.sinc_esp_data()
+                }
+            }
+        }
+
     }
 }

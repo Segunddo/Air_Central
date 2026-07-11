@@ -2,12 +2,15 @@
 
 SaveData::SaveData()
 {
-    QFile file("codes.json");
+    // ==========================================
+    // 1. Inicialização do codes.json
+    // ==========================================
+    QFile fileCodes("codes.json");
 
-    if (file.exists()) {
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QByteArray dadosSalvos = file.readAll();
-            file.close();
+    if (fileCodes.exists()) {
+        if (fileCodes.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QByteArray dadosSalvos = fileCodes.readAll();
+            fileCodes.close();
             QJsonDocument documento = QJsonDocument::fromJson(dadosSalvos);
 
             if (!documento.isNull() && documento.isObject())
@@ -22,13 +25,34 @@ SaveData::SaveData()
             this->data[QString::number(i)] = QJsonArray();
         }
 
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        if (fileCodes.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QJsonDocument novoDocumento(this->data);
-            file.write(novoDocumento.toJson(QJsonDocument::Indented));
-            file.close();
-            qDebug() << "Arquivo criado";
-        } else
-            qDebug() << "Erro ao criar o arquivo";
+            fileCodes.write(novoDocumento.toJson(QJsonDocument::Indented));
+            fileCodes.close();
+            qDebug() << "Arquivo codes.json criado";
+        } else {
+            qDebug() << "Erro ao criar o arquivo codes.json";
+        }
+    }
+
+    // ==========================================
+    // 2. Inicialização do agendamentos.json
+    // ==========================================
+    QFile fileAgendamentos(ARQUIVO_AGENDAMENTOS);
+
+    if (!fileAgendamentos.exists()) {
+        if (fileAgendamentos.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            // Cria um JSON base vazio: "{}"
+            QJsonObject rootVazio;
+            QJsonDocument docVazio(rootVazio);
+
+            fileAgendamentos.write(docVazio.toJson(QJsonDocument::Indented));
+            fileAgendamentos.close();
+
+            qDebug() << "Arquivo de agendamentos criado com sucesso na inicialização!";
+        } else {
+            qDebug() << "Erro ao criar o arquivo de agendamentos inicial!";
+        }
     }
 }
 

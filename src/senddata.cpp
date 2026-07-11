@@ -87,11 +87,8 @@ void SendData::sinc_esp_data()
     qint64 epochTime = QDateTime::currentSecsSinceEpoch();
     cmdTime["timestamp"] = epochTime;
 
-    // Se a ESP ainda precisar da string do dia para facilitar a busca do agendamento,
-    // você pode manter, mas o Timestamp já contém essa informação matematicamente.
-    int diaNumero = QDate::currentDate().dayOfWeek();
-    QStringList dias = {"", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"};
-    cmdTime["dia"] = dias[diaNumero];
+    // REMOVIDO: A ESP não precisa mais da string do dia no Sync_Time,
+    // o epochTime já dá toda a informação matemática para o RTC interno dela.
 
     filaDeMensagens.enqueue(cmdTime);
 
@@ -150,11 +147,24 @@ void SendData::sinc_esp_data()
                     codigosJaEnviados.append(nomeCodigo);
                 }
 
+                // --- ATUALIZAÇÃO: Conversão do Dia da Semana ---
+                // Transforma a String ("Seg", "Ter") no Inteiro (0 a 6) que a ESP espera
+                QString diaStr = rotina["dia"].toString();
+                int diaNumero = 0;
+
+                if (diaStr == "Dom") diaNumero = 0;
+                else if (diaStr == "Seg") diaNumero = 1;
+                else if (diaStr == "Ter") diaNumero = 2;
+                else if (diaStr == "Qua") diaNumero = 3;
+                else if (diaStr == "Qui") diaNumero = 4;
+                else if (diaStr == "Sex") diaNumero = 5;
+                else if (diaStr == "Sab") diaNumero = 6;
+
                 // Empacota a Tarefa (Agenda)
                 QJsonObject cmdSchedule;
                 cmdSchedule["command"] = "Add_Schedule";
                 cmdSchedule["id"] = idEsp;
-                cmdSchedule["dia"] = rotina["dia"].toString();
+                cmdSchedule["dia"] = diaNumero; // <-- Agora manda como Número!
                 cmdSchedule["hora"] = rotina["hora"].toString();
                 cmdSchedule["code"] = nomeCodigo;
                 filaDeMensagens.enqueue(cmdSchedule);
@@ -169,19 +179,27 @@ void SendData::sinc_esp_data()
     // ---------------------------------------------------------
     if (!filaDeMensagens.isEmpty()) {
         qDebug() << "Iniciando envio de" << filaDeMensagens.size() << "pacotes...";
-        timerFila->start(150); // Inicia o motor!
+
+        emit syncStarted(filaDeMensagens.size()); // AVISA QUE COMEÇOU
+        timerFila->start(150);
+
+    } else {
+        emit syncFinished(); // SE A FILA ESTIVER VAZIA, JÁ LIBERA A TELA
     }
 }
 
 void SendData::process_data()
 {
     if (filaDeMensagens.isEmpty()) {
-        timerFila->stop(); // Desliga o motor quando acabar
+        timerFila->stop();
         qDebug() << "Sincronização concluída com sucesso!";
+
+        emit syncFinished(); // AVISA QUE TERMINOU TUDO
         return;
     }
 
-    // Tira o próximo pacote da fila emanda para o Serial
     QJsonObject pacote = filaDeMensagens.dequeue();
     send_data(pacote);
+
+    emit syncProgress(filaDeMensagens.size()); // AVISA QUANTOS FALTAM
 }

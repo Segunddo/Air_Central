@@ -83,12 +83,10 @@ void SendData::sinc_esp_data()
     QJsonObject cmdTime;
     cmdTime["command"] = "Sync_Time";
 
-    // Pega os segundos exatos no momento do clique
-    qint64 epochTime = QDateTime::currentSecsSinceEpoch();
+    QDateTime agora = QDateTime::currentDateTime();
+    // Pega o Epoch UTC e soma a diferença do fuso do PC atual (ex: -10800s para o Brasil)
+    qint64 epochTime = agora.toSecsSinceEpoch() + agora.offsetFromUtc();
     cmdTime["timestamp"] = epochTime;
-
-    // REMOVIDO: A ESP não precisa mais da string do dia no Sync_Time,
-    // o epochTime já dá toda a informação matemática para o RTC interno dela.
 
     filaDeMensagens.enqueue(cmdTime);
 
@@ -135,13 +133,22 @@ void SendData::sinc_esp_data()
                     cmdCode["id"] = idEsp;
                     cmdCode["name"] = nomeCodigo;
 
-                    // Transforma o array [4500, 4400...] em string "4500,4400..."
+                    // Extrai os códigos salvos
                     const QJsonArray rawArray = objCodes[nomeCodigo].toArray();
                     QStringList rawStringList;
+
                     for (QJsonValue val : rawArray) {
-                        rawStringList << QString::number(val.toInt());
+                        if (val.isString()) {
+                            // Se for String (novo padrão gerado pela Bridge)
+                            rawStringList << val.toString();
+                        } else {
+                            // Suporte a legado caso ainda tenha números soltos no JSON
+                            rawStringList << QString::number(val.toInt());
+                        }
                     }
-                    cmdCode["raw"] = rawStringList.join(",");
+
+                    // JUNTA COM \n (A ESP vai separar e atirar cada linha no loop)
+                    cmdCode["raw"] = rawStringList.join("\n");
 
                     filaDeMensagens.enqueue(cmdCode);
                     codigosJaEnviados.append(nomeCodigo);

@@ -2,9 +2,6 @@
 
 SaveData::SaveData()
 {
-    // ==========================================
-    // 1. Inicialização do codes.json
-    // ==========================================
     QFile fileCodes("codes.json");
 
     if (fileCodes.exists()) {
@@ -35,14 +32,10 @@ SaveData::SaveData()
         }
     }
 
-    // ==========================================
-    // 2. Inicialização do agendamentos.json
-    // ==========================================
     QFile fileAgendamentos(ARQUIVO_AGENDAMENTOS);
 
     if (!fileAgendamentos.exists()) {
         if (fileAgendamentos.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            // Cria um JSON base vazio: "{}"
             QJsonObject rootVazio;
             QJsonDocument docVazio(rootVazio);
 
@@ -66,19 +59,15 @@ void SaveData::save_data(const QJsonObject newData)
 
         QJsonArray arrayAtual = this->data.value(chave).toArray();
 
-        // Verifica se o código já existe no array (Evita duplicatas)
         if (!arrayAtual.contains(novoCodigo)) {
-            // Se não existe, adiciona no array
             arrayAtual.append(novoCodigo);
 
-            // Substitui o array antigo pelo novo array no objeto principal
             this->data[chave] = arrayAtual;
 
-            foiModificado = true; // Avisa que teremos que salvar no disco
+            foiModificado = true;
         }
     }
 
-    // Só reescreve o arquivo JSON se houver códigos novos de verdade
     if (foiModificado) {
         QFile file("codes.json");
         if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -107,12 +96,10 @@ void SaveData::delete_data(const QString &comando)
         return;
     }
 
-    // Remove o ÚLTIMO elemento adicionado a este array
     arrayAtual.removeLast();
 
     data[comando] = arrayAtual;
 
-    // Salva
     QFile file("codes.json");
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QJsonDocument documento(this->data);
@@ -124,7 +111,6 @@ void SaveData::delete_data(const QString &comando)
     }
 
     emit codes_size_changed();
-
 }
 
 void SaveData::delete_all_data()
@@ -133,14 +119,12 @@ void SaveData::delete_all_data()
     file.remove();
     qDebug() << "Arquivo apagado";
 
-    // Reinicializa o estado em memória igual ao construtor
     this->data = QJsonObject();
     this->data["Ligar"]    = QJsonArray();
     this->data["Desligar"] = QJsonArray();
     for (int i = 16; i <= 30; ++i)
         this->data[QString::number(i)] = QJsonArray();
 
-    // Recria o arquivo limpo no disco
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         file.write(QJsonDocument(this->data).toJson(QJsonDocument::Indented));
         file.close();
@@ -150,7 +134,7 @@ void SaveData::delete_all_data()
     emit codes_size_changed();
 }
 
-Q_INVOKABLE int SaveData::get_command_count(const QString &comando)
+int SaveData::get_command_count(const QString &comando)
 {
     return this->data[comando].toArray().size();
 }
@@ -159,7 +143,7 @@ QJsonObject SaveData::ler_arquivo()
 {
     QFile file(ARQUIVO_AGENDAMENTOS);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return QJsonObject(); // Retorna vazio se o arquivo não existir ainda
+        return QJsonObject();
     }
 
     QByteArray fileData = file.readAll();
@@ -215,7 +199,6 @@ void SaveData::remover_regra(QString idEsp, int index)
     if (rootObj.contains(idEsp)) {
         QJsonArray regrasArray = rootObj[idEsp].toArray();
 
-        // Verifica se o índice é válido
         if (index >= 0 && index < regrasArray.size()) {
             regrasArray.removeAt(index);
             rootObj[idEsp] = regrasArray;
@@ -232,10 +215,10 @@ QString SaveData::obter_regras(QString idEsp)
     if (rootObj.contains(idEsp)) {
         QJsonArray regrasArray = rootObj[idEsp].toArray();
         QJsonDocument doc(regrasArray);
-        return QString(doc.toJson(QJsonDocument::Compact)); // Retorna a string pronta pro QML
+        return QString(doc.toJson(QJsonDocument::Compact));
     }
 
-    return "[]"; // Retorna array vazio se não tiver nada
+    return "[]";
 }
 
 void SaveData::importar_saci(const QString &centroId, int tempPadrao)
@@ -245,13 +228,11 @@ void SaveData::importar_saci(const QString &centroId, int tempPadrao)
     QProcess *process = new QProcess(this);
     QStringList argumentos;
 
-    // Monta os argumentos mapeando os parâmetros passados pela UI
     argumentos << "saci_ci.py"
                << "--id" << centroId
                << "--temp" << QString::number(tempPadrao)
                << "--out" << ARQUIVO_AGENDAMENTOS;
 
-    // Gerencia o término da execução assíncrona do script
     QObject::connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
                      [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
                          if (exitCode == 0 && exitStatus == QProcess::NormalExit) {
@@ -259,17 +240,16 @@ void SaveData::importar_saci(const QString &centroId, int tempPadrao)
                              emit agendamentos_atualizados();
                          } else {
                              qDebug() << "Erro crítico ou timeout ao rodar o script Python. Código de saída:" << exitCode;
-
                              qDebug() << "LOG DE ERRO DO PYTHON:" << process->readAllStandardError();
                          }
                          process->deleteLater();
                      });
 
-    #ifdef Q_OS_WIN
-        QString pythonCmd = "python";
-    #else
-        QString pythonCmd = "python3";
-    #endif
+#ifdef Q_OS_WIN
+    QString pythonCmd = "python";
+#else
+    QString pythonCmd = "python3";
+#endif
 
     process->start(pythonCmd, argumentos);
 }

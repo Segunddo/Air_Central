@@ -3,7 +3,6 @@
 SendData::SendData(QSerialPort *portaSerial, QObject *parent)
     : QObject(parent), serial(portaSerial)
 {
-    // Prepara o timer que vai esvaziar a fila (150ms entre cada envio)
     timerFila = new QTimer(this);
     connect(timerFila, &QTimer::timeout, this, &SendData::process_data);
 }
@@ -75,7 +74,7 @@ void SendData::send_data(QJsonObject jsonCommand)
 
 void SendData::sinc_esp_data()
 {
-    filaDeMensagens.clear(); // Limpa qualquer envio que tenha ficado travado
+    filaDeMensagens.clear();
 
     // ---------------------------------------------------------
     // PASSO 1: Empacotar a Hora Atual (Timestamp Unix)
@@ -83,15 +82,13 @@ void SendData::sinc_esp_data()
     QJsonObject cmdTime;
     cmdTime["command"] = "Sync_Time";
 
-    QDateTime agora = QDateTime::currentDateTime();
-    // Pega o Epoch UTC e soma a diferença do fuso do PC atual (ex: -10800s para o Brasil)
-    qint64 epochTime = agora.toSecsSinceEpoch() + agora.offsetFromUtc();
+    qint64 epochTime = QDateTime::currentSecsSinceEpoch();
     cmdTime["timestamp"] = epochTime;
 
     filaDeMensagens.enqueue(cmdTime);
 
     // ---------------------------------------------------------
-    // PASSO 2: Empacotar os Agendamentos e Códigos
+    // PASSO 2: Empacotar os Códigos IR e Agendamentos
     // ---------------------------------------------------------
     QFile fileAgendamentos("agendamentos.json");
     QFile fileCodes("codes.json");
@@ -104,12 +101,9 @@ void SendData::sinc_esp_data()
         fileAgendamentos.close();
         fileCodes.close();
 
-        // Itera sobre cada ESP salva nos agendamentos
         for (auto it = rootAgendamentos.begin(); it != rootAgendamentos.end(); ++it) {
             QString idEsp = it.key();
             QJsonArray rotinas = it.value().toArray();
-
-            if (rotinas.isEmpty()) continue;
 
             // Manda a ESP limpar a memória antes de receber os dados novos
             QJsonObject cmdClear;
@@ -117,8 +111,30 @@ void SendData::sinc_esp_data()
             cmdClear["id"] = idEsp;
             filaDeMensagens.enqueue(cmdClear);
 
-            QStringList codigosJaEnviados; // Evita mandar o mesmo código IR repetido pra mesma placa
+            // =========================================================
+            // NOVA LÓGICA: Envia TODOS os códigos disponíveis no sistema
+            // para a Flash do ESP, garantindo o funcionamento manual.
+            // =========================================================
+            for (auto itCode = objCodes.begin(); itCode != objCodes.end(); ++itCode) {
+                QString nomeCodigo = itCode.key();
+                QJsonArray rawArray = itCode.value().toArray();
 
+                if (!rawArray.isEmpty()) {
+                    QJsonObject cmdCode;
+                    cmdCode["command"] = "Add_Code";
+                    cmdCode["id"] = idEsp;
+                    cmdCode["name"] = nomeCodigo;
+
+                    // Pega o último código gravado
+                    cmdCode["raw"] = rawArray.last().toString();
+
+                    filaDeMensagens.enqueue(cmdCode);
+                }
+            }
+
+            // =========================================================
+            // Envia apenas os horários dos agendamentos
+            // =========================================================
             for (int i = 0; i < rotinas.size(); ++i) {
                 QJsonObject rotina = rotinas[i].toObject();
 
@@ -126,36 +142,6 @@ void SendData::sinc_esp_data()
                 QString temp = rotina["temp"].toString();
                 QString nomeCodigo = (acao == "Ligar" && temp != "--") ? temp : acao;
 
-                // Empacota o Código IR (se ainda não foi enviado)
-                if (!codigosJaEnviados.contains(nomeCodigo) && objCodes.contains(nomeCodigo)) {
-                    QJsonObject cmdCode;
-                    cmdCode["command"] = "Add_Code";
-                    cmdCode["id"] = idEsp;
-                    cmdCode["name"] = nomeCodigo;
-
-                    // Extrai os códigos salvos
-                    const QJsonArray rawArray = objCodes[nomeCodigo].toArray();
-                    QStringList rawStringList;
-
-                    for (QJsonValue val : rawArray) {
-                        if (val.isString()) {
-                            // Se for String (novo padrão gerado pela Bridge)
-                            rawStringList << val.toString();
-                        } else {
-                            // Suporte a legado caso ainda tenha números soltos no JSON
-                            rawStringList << QString::number(val.toInt());
-                        }
-                    }
-
-                    // JUNTA COM \n (A ESP vai separar e atirar cada linha no loop)
-                    cmdCode["raw"] = rawStringList.join("\n");
-
-                    filaDeMensagens.enqueue(cmdCode);
-                    codigosJaEnviados.append(nomeCodigo);
-                }
-
-                // --- ATUALIZAÇÃO: Conversão do Dia da Semana ---
-                // Transforma a String ("Seg", "Ter") no Inteiro (0 a 6) que a ESP espera
                 QString diaStr = rotina["dia"].toString();
                 int diaNumero = 0;
 
@@ -167,13 +153,13 @@ void SendData::sinc_esp_data()
                 else if (diaStr == "Sex") diaNumero = 5;
                 else if (diaStr == "Sab") diaNumero = 6;
 
-                // Empacota a Tarefa (Agenda)
                 QJsonObject cmdSchedule;
                 cmdSchedule["command"] = "Add_Schedule";
                 cmdSchedule["id"] = idEsp;
-                cmdSchedule["dia"] = diaNumero; // <-- Agora manda como Número!
+                cmdSchedule["dia"] = diaNumero;
                 cmdSchedule["hora"] = rotina["hora"].toString();
                 cmdSchedule["code"] = nomeCodigo;
+
                 filaDeMensagens.enqueue(cmdSchedule);
             }
         }
@@ -187,11 +173,12 @@ void SendData::sinc_esp_data()
     if (!filaDeMensagens.isEmpty()) {
         qDebug() << "Iniciando envio de" << filaDeMensagens.size() << "pacotes...";
 
-        emit syncStarted(filaDeMensagens.size()); // AVISA QUE COMEÇOU
-        timerFila->start(150);
+        emit syncStarted(filaDeMensagens.size());
+
+        timerFila->start(350);
 
     } else {
-        emit syncFinished(); // SE A FILA ESTIVER VAZIA, JÁ LIBERA A TELA
+        emit syncFinished();
     }
 }
 
@@ -201,12 +188,12 @@ void SendData::process_data()
         timerFila->stop();
         qDebug() << "Sincronização concluída com sucesso!";
 
-        emit syncFinished(); // AVISA QUE TERMINOU TUDO
+        emit syncFinished();
         return;
     }
 
     QJsonObject pacote = filaDeMensagens.dequeue();
     send_data(pacote);
 
-    emit syncProgress(filaDeMensagens.size()); // AVISA QUANTOS FALTAM
+    emit syncProgress(filaDeMensagens.size());
 }

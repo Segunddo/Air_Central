@@ -19,6 +19,7 @@ class ReceiveData : public QObject
 public:
     explicit ReceiveData(SaveData *saveData, QObject *parent = nullptr);
 
+    // CORREÇÃO: Função restaurada para o main.cpp conseguir acessar a porta!
     QSerialPort* getSerialPort() { return serialPort; }
 
     Q_INVOKABLE bool conectar(QString nomePorta);
@@ -38,10 +39,9 @@ private slots:
 private:
     QSerialPort *serialPort;
     QByteArray buffer;
-    QString waitedCommand = ""; // Começa vazio
+    QString waitedCommand = "";
 
     SaveData *saveData;
 };
-
 
 #endif // RECEIVEDATA_H

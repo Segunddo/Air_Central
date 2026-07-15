@@ -4,7 +4,6 @@ ReceiveData::ReceiveData(SaveData *saveData, QObject *parent) : QObject(parent) 
 {
     serialPort = new QSerialPort(this);
 
-    // Conecta o sinal de dados chegando ao nosso slot de leitura
     connect(serialPort, &QSerialPort::readyRead,
             this, &ReceiveData::read_data);
 }
@@ -12,7 +11,6 @@ ReceiveData::ReceiveData(SaveData *saveData, QObject *parent) : QObject(parent) 
 QStringList ReceiveData::list_ports() {
     QStringList nomesDasPortas;
 
-    // Pega a lista de todas as portas disponíveis no sistema
     const auto portas = QSerialPortInfo::availablePorts();
 
     nomesDasPortas.append("--");
@@ -24,7 +22,6 @@ QStringList ReceiveData::list_ports() {
 
 bool ReceiveData::conectar(QString nomePorta)
 {
-    // SEGURANÇA: Verifica se o objeto 'serial' existe na memória.
     if (serialPort == nullptr) {
         serialPort = new QSerialPort(this);
     }
@@ -53,19 +50,16 @@ void ReceiveData::read_data()
     buffer.append(serialPort->readAll());
 
     while (buffer.contains('\n')) {
-        // Encontra onde está o fim da linha
         int indexQuebra = buffer.indexOf('\n');
 
         QByteArray linha = buffer.left(indexQuebra).trimmed();
 
         buffer.remove(0, indexQuebra + 1);
 
-        // Se a linha for vazia, ignora
         if (linha.isEmpty()) {
             continue;
         }
 
-        // Tenta converter o texto recebido para JSON
         QJsonParseError error;
         QJsonDocument doc = QJsonDocument::fromJson(linha, &error);
 
@@ -82,7 +76,6 @@ void ReceiveData::read_data()
 
 void ReceiveData::decode_data(QJsonObject jsonObject)
 {
-    // Verifica o comando recebido
     QString messageType = jsonObject["command"].toString();
 
     if (messageType == "Resposta_ID") {
@@ -101,14 +94,11 @@ void ReceiveData::decode_data(QJsonObject jsonObject)
 
         QString code = jsonObject["code"].toString();
 
-        // Monta o JSON exato que o SaveData precisa (ex: {"Ligar": "0xFFA2"})
         QJsonObject novoDado;
         novoDado[waitedCommand] = code;
 
-        // Salva no arquivo
         saveData->save_data(novoDado);
 
-        // Limpa a variável
         waitedCommand = "";
         qDebug() << "Código salvo com sucesso!";
     }

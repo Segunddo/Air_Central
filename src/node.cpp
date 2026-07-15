@@ -122,12 +122,14 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
   if (command == "Clear_Memory" && docBasico["id"] == myID) {
       listaAgendamentos.clear(); 
       
-      // Varre a Flash e apaga todos os arquivos de códigos IR salvos
       Dir dir = LittleFS.openDir("/");
       while (dir.next()) {
-          LittleFS.remove(dir.fileName());
+          // Só apaga se o arquivo NÃO for o de ID!
+          if (dir.fileName() != "nodeID.txt") {
+              LittleFS.remove(dir.fileName());
+          }
       }
-      Serial.println("Memória RAM e arquivos da Flash foram limpos.");
+      Serial.println("Memória RAM e arquivos IR limpos. ID preservado.");
   }
 
   // --- TRATAMENTO: SALVAR CÓDIGO NOVO NA FLASH ---

@@ -14,6 +14,41 @@ int temperaturaAlvo = 25;
 Task tarefaChecagem(5000, TASK_FOREVER, &checarAgendamentos);
 
 // =======================================================================
+// CORREÇÃO: Função auxiliar para imprimir dados da flash na Serial
+// =======================================================================
+void imprimirArquivosFlash() {
+  Serial.println("\n==================================================");
+  Serial.println("[LITTLEFS] LISTANDO ARQUIVOS SALVOS NA FLASH");
+  Serial.println("==================================================");
+
+  Dir dir = LittleFS.openDir("/"); //[cite: 2]
+  int contadorDeArquivos = 0;
+
+  while (dir.next()) { //[cite: 2]
+    String nomeArquivo = dir.fileName(); //[cite: 2]
+    File f = LittleFS.open("/" + nomeArquivo, "r"); //[cite: 2]
+    if (f) {
+      size_t tamanho = f.size();
+      Serial.printf("-> Arquivo: '%s' (%d bytes)\n", nomeArquivo.c_str(), tamanho);
+      Serial.print("   Conteudo: ");
+      while (f.available()) {
+        Serial.write(f.read());
+      }
+      Serial.println("\n--------------------------------------------------");
+      f.close();
+    }
+    contadorDeArquivos++;
+  }
+
+  if (contadorDeArquivos == 0) {
+    Serial.println("Nenhum arquivo encontrado na memoria Flash!");
+  } else {
+    Serial.printf("Total de %d arquivo(s) encontrado(s).\n", contadorDeArquivos);
+  }
+  Serial.println("==================================================\n");
+}
+
+// =======================================================================
 // Envio de Status para a Central
 // =======================================================================
 void enviarStatusCentral() {
@@ -68,14 +103,12 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
         Serial.printf("Alterando ID de '%s' para '%s'\n", myID.c_str(), novoID.c_str());
         myID = novoID;
 
-        // LÓGICA DE SALVAR O ID
-        File f = LittleFS.open("/nodeID.txt", "w");
+        File f = LittleFS.open("/nodeID.txt", "w"); //[cite: 2]
         if (f) {
             f.print(myID);
             f.close();
         }
 
-        // Confirma a mudança pra central
         JsonDocument docResposta;
         docResposta["command"] = "Resposta_ID";
         docResposta["id"]      = myID;
@@ -87,10 +120,8 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
 
   // --- TRATAMENTO: SINCRONIZAÇÃO DE TEMPO ---
   if (command == "Sync_Time") {
-    // Pega o Timestamp Unix (em segundos) que veio do Qt
     time_t epochTime = docBasico["timestamp"].as<long>(); 
 
-    // Configura o relógio interno do sistema operacional (RTC)
     struct timeval tv;
     tv.tv_sec = epochTime;
     tv.tv_usec = 0;
@@ -101,7 +132,7 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
 
   // --- TRATAMENTO: RECEBER AGENDAMENTO ---
   if (command == "Add_Schedule" && docBasico["id"] == myID) {
-      int8_t diaNum = docBasico["dia"].as<int>(); // Qt manda 1 para Segunda
+      int8_t diaNum = docBasico["dia"].as<int>(); 
       String horaStr = docBasico["hora"].as<String>();
       String codigo = docBasico["code"].as<String>();
 
@@ -118,23 +149,27 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
       }
   }
 
-  // --- TRATAMENTO: LIMPAR MEMÓRIA ---
+  // --- TRATAMENTO: LIMPAR MEMÓRIA (Proteger nodeID.txt) ---
   if (command == "Clear_Memory" && docBasico["id"] == myID) {
       listaAgendamentos.clear(); 
       
-      Dir dir = LittleFS.openDir("/");
-      while (dir.next()) {
-          // Só apaga se o arquivo NÃO for o de ID!
-          if (dir.fileName() != "nodeID.txt") {
-              LittleFS.remove(dir.fileName());
+      // CORREÇÃO: Remove todos os arquivos exceto nodeID.txt
+      Dir dir = LittleFS.openDir("/"); //[cite: 2]
+      while (dir.next()) { //[cite: 2]
+          String nomeArquivo = dir.fileName(); //[cite: 2]
+          if (nomeArquivo != "nodeID.txt") {
+              LittleFS.remove("/" + nomeArquivo);
           }
       }
-      Serial.println("Memória RAM e arquivos IR limpos. ID preservado.");
+      Serial.println("Memória RAM e arquivos de códigos limpos. ID protegido.");
+      
+      // CORREÇÃO: Mostra o estado da flash na serial
+      imprimirArquivosFlash();
   }
 
   // --- TRATAMENTO: SALVAR CÓDIGO NOVO NA FLASH ---
   if (command == "Add_Code" && docBasico["id"] == myID) {
-    JsonDocument docRaw; // Se usar ArduinoJson v6, use DynamicJsonDocument docRaw(2048);
+    DynamicJsonDocument docRaw(4096); // Alocação robusta para códigos longos[cite: 2]
     DeserializationError erro = deserializeJson(docRaw, msg);
       
     if (!erro) {
@@ -142,11 +177,14 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
             String nome = docRaw["name"].as<String>();
             String raw = docRaw["raw"].as<String>();
               
-            File f = LittleFS.open("/" + nome + ".txt", "w");
+            File f = LittleFS.open("/" + nome + ".txt", "w"); //[cite: 2]
             if (f) {
                 f.print(raw);
                 f.close();
                 Serial.printf("Código IR '%s' salvo no arquivo /%s.txt\n", nome.c_str(), nome.c_str());
+                
+                // CORREÇÃO: Mostra a flash com o novo arquivo em tempo real
+                imprimirArquivosFlash();
             } else {
                 Serial.println("Erro ao criar arquivo na Flash!");
             }
@@ -154,7 +192,6 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
             Serial.println("Erro: JSON recebido não possui 'name' ou 'raw'.");
         }
     } else {
-        // Isso vai te mostrar exatamente se o JSON está chegando quebrado!
         Serial.print("Falha ao ler JSON gigante do Add_Code: ");
         Serial.println(erro.c_str()); 
     }
@@ -167,9 +204,7 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
 
       if (docRaw.containsKey("raw")) {
           const char* rawStr = docRaw["raw"];
-          
           Serial.printf("[DEBUG ESP] Recebido comando manual pela rede. Tamanho da string: %d caracteres.\n", strlen(rawStr));
-          
           dispararStringRaw(rawStr);
       } 
       else if (docRaw.containsKey("name")) {
@@ -195,7 +230,6 @@ void dispararStringRaw(const char* rawStr) {
 
   Serial.printf("[DEBUG ESP] Preparando para atirar... Array IR com %d posições.\n", count);
 
-  // Restaurando a proteção do código antigo para não resetar o chip caso a RAM falte
   uint16_t* pRaw = new uint16_t[count];
   
   if (pRaw != nullptr) {
@@ -233,16 +267,12 @@ void dispararCodigoSalvo(String nomeCodigo) {
 
   Serial.printf("[DEBUG ESP] Iniciando disparo do agendamento: %s\n", caminhoArquivo.c_str());
 
-  // Lê o arquivo linha por linha em vez de carregar tudo de uma vez para a RAM
   while (f.available()) {
     String linhaRaw = f.readStringUntil('\n');
-    linhaRaw.trim(); // Remove quebras de linha invisíveis (\r)
+    linhaRaw.trim(); 
     
     if (linhaRaw.length() > 0) {
       dispararStringRaw(linhaRaw.c_str());
-      
-      // O mesmo delay de 250ms que colocamos no Qt!
-      // Usamos delay() pois ele já chama yield() internamente no ESP8266
       delay(250); 
     }
   }
@@ -255,16 +285,15 @@ void checarAgendamentos() {
     time_t agora;
     struct tm infoTempo;
     time(&agora);
-    localtime_r(&agora, &infoTempo); // O RTC Virtual te dá os dados mastigados!
+    localtime_r(&agora, &infoTempo);
 
-    // Se o ano for 1970 (menor que 2000), o relógio ainda não foi sincronizado pelo Qt
     if (infoTempo.tm_year + 1900 < 2000) {
-        return; // Sai da função e não faz nada, evitando disparos errados
+        return; 
     }
 
     int8_t horaAtual = infoTempo.tm_hour;
     int8_t minutoAtual = infoTempo.tm_min;
-    int8_t diaAtual = infoTempo.tm_wday; // Retorna de 0 (Dom) a 6 (Sab)
+    int8_t diaAtual = infoTempo.tm_wday; 
 
     for (auto &agenda : listaAgendamentos) {
         if (agenda.diaDaSemana == diaAtual && agenda.hora == horaAtual && agenda.minuto == minutoAtual) {
@@ -274,7 +303,6 @@ void checarAgendamentos() {
                 agenda.jaDisparou = true; 
             }
         } else {
-            // Se o minuto virou ou o dia mudou, destrava para a próxima vez
             agenda.jaDisparou = false; 
         }
     }
@@ -284,23 +312,23 @@ void checarAgendamentos() {
 // Ciclo de Vida do Microcontrolador
 // =======================================================================
 void setup() {
-  Serial.setRxBufferSize(2048);
   Serial.begin(115200);
 
-  // Inicializa o LittleFS
   if (!LittleFS.begin()) {
       Serial.println("Formatando a memória Flash pela primeira vez...");
       LittleFS.format();
       LittleFS.begin();
   }
 
-  // LÓGICA DE LER O ID
-  if (LittleFS.exists("/nodeID.txt")) {
-      File f = LittleFS.open("/nodeID.txt", "r");
-      myID = f.readString();
-      f.close();
+  // CORREÇÃO: Mostra no monitor serial o que já está salvo assim que o chip liga
+  imprimirArquivosFlash();
+
+  if (LittleFS.exists("/nodeID.txt")) { //[cite: 2]
+      File f = LittleFS.open("/nodeID.txt", "r"); //[cite: 2]
+      myID = f.readString(); //[cite: 2]
+      f.close(); //[cite: 2]
   } else {
-      myID = "CI000"; // Se o arquivo não existir, assume o ID padrão
+      myID = "CI000"; //[cite: 2]
   }
 
   mesh.init(MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT);

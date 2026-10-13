@@ -107,8 +107,16 @@ void ReceiveData::decode_data(QJsonObject jsonObject)
 
         QString idEsp = jsonObject["id"].toString();
         QString status = jsonObject["status"].toString();
-        QString temp = jsonObject["temp"].toString();
-        qDebug() << "Atualização: " + idEsp + " " + status + " " + temp;
+        // O nó manda "temp" como número; toString() num número devolve "".
+        int temp = jsonObject["temp"].toVariant().toInt();
+        qDebug() << "Atualização:" << idEsp << status << temp;
+
+        emit statusUpdated(idEsp, status, temp);
+    }
+
+    else if (messageType == "Need_Time") {
+        qDebug() << "ESP sem hora válida pediu sincronização:" << jsonObject["id"].toString();
+        emit timeRequested();
     }
 }
 

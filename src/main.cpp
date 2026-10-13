@@ -21,6 +21,10 @@ int main(int argc, char *argv[]) {
     ReceiveData receiveData(&saveData);
     SendData sendData(receiveData.getSerialPort());
 
+    // Um nó que reiniciou (sem RTC) pede a hora; a central responde na hora.
+    QObject::connect(&receiveData, &ReceiveData::timeRequested,
+                     &sendData, &SendData::send_time);
+
     QQmlApplicationEngine engine;
 
     // 2. Expondo as instâncias para o QML

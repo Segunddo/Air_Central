@@ -57,6 +57,28 @@ void SendData::require_ir_read()
     qDebug() << "Classe SendData requisitou leitura de infravermelho";
 }
 
+QJsonObject SendData::build_time_command() const
+{
+    // Epoch UTC; o nó converte para o horário local com a TZ configurada nele.
+    QJsonObject cmdTime;
+    cmdTime["command"] = "Sync_Time";
+    cmdTime["timestamp"] = QDateTime::currentSecsSinceEpoch();
+    return cmdTime;
+}
+
+void SendData::send_time()
+{
+    // Depois de uma queda de energia todos os nós pedem a hora ao mesmo tempo;
+    // um único broadcast a cada 10 s atende todos.
+    qint64 agora = QDateTime::currentSecsSinceEpoch();
+    if (agora - ultimoEnvioHora < 10) {
+        return;
+    }
+    ultimoEnvioHora = agora;
+
+    send_data(build_time_command());
+}
+
 void SendData::send_data(QJsonObject jsonCommand)
 {
     QJsonDocument doc(jsonCommand);
@@ -79,13 +101,7 @@ void SendData::sinc_esp_data()
     // ---------------------------------------------------------
     // PASSO 1: Empacotar a Hora Atual (Timestamp Unix)
     // ---------------------------------------------------------
-    QJsonObject cmdTime;
-    cmdTime["command"] = "Sync_Time";
-
-    qint64 epochTime = QDateTime::currentSecsSinceEpoch();
-    cmdTime["timestamp"] = epochTime;
-
-    filaDeMensagens.enqueue(cmdTime);
+    filaDeMensagens.enqueue(build_time_command());
 
     // ---------------------------------------------------------
     // PASSO 2: Empacotar os Códigos IR e Agendamentos

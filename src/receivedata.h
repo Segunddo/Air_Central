@@ -31,6 +31,8 @@ public slots:
 
 signals:
     void newDeviceDetected(QString idEsp);
+    void statusUpdated(QString idEsp, QString status, int temp);
+    void timeRequested();
 
 private slots:
     void read_data();

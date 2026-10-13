@@ -10,7 +10,7 @@ ApplicationWindow {
     color: "#f4f4f4"
 
     Image {
-            source: "icone_ar.svg"
+            source: "icon.svg"
             width: 40
             height: 40
             fillMode: Image.PreserveAspectFit

@@ -16,11 +16,25 @@ void mensagemRecebidaDaMesh(uint32_t from, String &msg) {
 // =======================================================================
 // QT -> MESH ou BRIDGE
 // =======================================================================
+// Leitura não bloqueante: readStringUntil() esperava até 1 s quando a linha
+// chegava incompleta, e nesse tempo o mesh.update() não rodava.
+String bufferSerial;
+
 void mensagemRecebidaDoQt() {
-  if (Serial.available()) {
-    String mensagemQt = Serial.readStringUntil('\n');
+  while (Serial.available()) {
+    char c = (char) Serial.read();
+
+    if (c != '\n') {
+      if (bufferSerial.length() < TAMANHO_MAX_LINHA) {
+        bufferSerial += c;
+      }
+      continue;
+    }
+
+    String mensagemQt = bufferSerial;
+    bufferSerial = "";
     mensagemQt.trim();
-    
+
     if (mensagemQt.length() > 0) {
       // CORREÇÃO: Filtro estático para decodificar apenas o "command"
       // Evita carregar o array "raw" gigante na memória RAM da Bridge!

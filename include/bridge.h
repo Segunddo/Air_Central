@@ -22,6 +22,11 @@
 #define IR_RECV_PIN 14
 
 // ==========================================
+// Serial (Qt -> Ponte)
+// ==========================================
+#define TAMANHO_MAX_LINHA 4096 // Linhas maiores são cortadas e o JSON é rejeitado
+
+// ==========================================
 // Protótipos das Funções
 // ==========================================
 void mensagemRecebidaDaMesh(uint32_t from, String &msg);

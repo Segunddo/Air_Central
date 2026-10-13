@@ -12,10 +12,14 @@ bool powerStatus = false;
 int temperaturaAtual = 25;
 int temperaturaAlvo = 25;
 Task tarefaChecagem(5000, TASK_FOREVER, &checarAgendamentos);
+Task tarefaPedirHora(30000, TASK_FOREVER, &pedirHoraSeNecessario);
 
 // =======================================================================
-// CORREÇÃO: Função auxiliar para imprimir dados da flash na Serial
+// Função auxiliar para imprimir dados da flash na Serial.
+// Só compila com -D DEBUG_FLASH: despejar todos os códigos na serial a cada
+// Add_Code bloqueava o nó por vários segundos e travava o mesh.update().
 // =======================================================================
+#ifdef DEBUG_FLASH
 void imprimirArquivosFlash() {
   Serial.println("\n==================================================");
   Serial.println("[LITTLEFS] LISTANDO ARQUIVOS SALVOS NA FLASH");
@@ -47,6 +51,7 @@ void imprimirArquivosFlash() {
   }
   Serial.println("==================================================\n");
 }
+#endif
 
 // =======================================================================
 // Envio de Status para a Central
@@ -143,6 +148,7 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
 
           Agendamento novoAgendamento = {diaNum, h, m, codigo, false};
           listaAgendamentos.push_back(novoAgendamento);
+          salvarAgendamento(novoAgendamento);
 
           Serial.printf("Agendamento salvo: Dia %d às %02d:%02d para código %s\n", 
                         diaNum, h, m, codigo.c_str());
@@ -162,9 +168,10 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
           }
       }
       Serial.println("Memória RAM e arquivos de códigos limpos. ID protegido.");
-      
-      // CORREÇÃO: Mostra o estado da flash na serial
+
+#ifdef DEBUG_FLASH
       imprimirArquivosFlash();
+#endif
   }
 
   // --- TRATAMENTO: SALVAR CÓDIGO NOVO NA FLASH ---
@@ -182,9 +189,10 @@ void mensagensRecebidas(uint32_t nodeId_de_quem_enviou, String &msg) {
                 f.print(raw);
                 f.close();
                 Serial.printf("Código IR '%s' salvo no arquivo /%s.txt\n", nome.c_str(), nome.c_str());
-                
-                // CORREÇÃO: Mostra a flash com o novo arquivo em tempo real
+
+#ifdef DEBUG_FLASH
                 imprimirArquivosFlash();
+#endif
             } else {
                 Serial.println("Erro ao criar arquivo na Flash!");
             }
@@ -281,6 +289,74 @@ void dispararCodigoSalvo(String nomeCodigo) {
   Serial.println("[DEBUG ESP] Sequência de disparo do agendamento finalizada!");
 }
 
+// =======================================================================
+// Relógio e persistência dos agendamentos
+// =======================================================================
+bool relogioValido() {
+  time_t agora = time(nullptr);
+  struct tm infoTempo;
+  localtime_r(&agora, &infoTempo);
+  return infoTempo.tm_year + 1900 >= 2000;
+}
+
+// Depois de um reinício o relógio volta para 1970: pede a hora à central
+// (via ponte) a cada 30 s até receber um Sync_Time.
+void pedirHoraSeNecessario() {
+  if (relogioValido()) return;
+
+  JsonDocument docPedido;
+  docPedido["command"] = "Need_Time";
+  docPedido["id"] = myID;
+
+  String pedidoJSON;
+  serializeJson(docPedido, pedidoJSON);
+  mesh.sendBroadcast(pedidoJSON);
+
+  Serial.println("Relógio sem hora válida. Pedindo Sync_Time à central...");
+}
+
+// Uma linha por agendamento: "dia,hora,minuto,codigo". O arquivo é apagado
+// pelo Clear_Memory junto com os códigos, então a sincronização o recria.
+void salvarAgendamento(const Agendamento &agenda) {
+  File f = LittleFS.open(ARQUIVO_AGENDAMENTOS, "a");
+  if (!f) {
+    Serial.println("Erro ao salvar agendamento na Flash!");
+    return;
+  }
+  f.printf("%d,%d,%d,%s\n", agenda.diaDaSemana, agenda.hora, agenda.minuto, agenda.nomeCodigo.c_str());
+  f.close();
+}
+
+void carregarAgendamentos() {
+  listaAgendamentos.clear();
+
+  File f = LittleFS.open(ARQUIVO_AGENDAMENTOS, "r");
+  if (!f) return;
+
+  while (f.available()) {
+    String linha = f.readStringUntil('\n');
+    linha.trim();
+    if (linha.length() == 0) continue;
+
+    int c1 = linha.indexOf(',');
+    int c2 = linha.indexOf(',', c1 + 1);
+    int c3 = linha.indexOf(',', c2 + 1);
+    if (c1 == -1 || c2 == -1 || c3 == -1) continue;
+
+    Agendamento agenda = {
+      (int8_t) linha.substring(0, c1).toInt(),
+      (int8_t) linha.substring(c1 + 1, c2).toInt(),
+      (int8_t) linha.substring(c2 + 1, c3).toInt(),
+      linha.substring(c3 + 1),
+      false
+    };
+    listaAgendamentos.push_back(agenda);
+  }
+  f.close();
+
+  Serial.printf("%d agendamento(s) carregado(s) da Flash.\n", listaAgendamentos.size());
+}
+
 void checarAgendamentos() {
     time_t agora;
     struct tm infoTempo;
@@ -320,15 +396,26 @@ void setup() {
       LittleFS.begin();
   }
 
-  // CORREÇÃO: Mostra no monitor serial o que já está salvo assim que o chip liga
+#ifdef DEBUG_FLASH
   imprimirArquivosFlash();
+#endif
+
+  // O nó não tem RTC com bateria: a hora chega como epoch UTC pela malha e
+  // precisa ser convertida para o horário de Brasília (UTC-3, sem horário de verão).
+  setenv("TZ", FUSO_HORARIO, 1);
+  tzset();
+
+  carregarAgendamentos();
 
   if (LittleFS.exists("/nodeID.txt")) { //[cite: 2]
       File f = LittleFS.open("/nodeID.txt", "r"); //[cite: 2]
       myID = f.readString(); //[cite: 2]
       f.close(); //[cite: 2]
   } else {
-      myID = "CI000"; //[cite: 2]
+      // ID padrão único por placa: com um ID fixo ("CI000"), duas placas novas
+      // tinham o mesmo nome e um Change_ID renomeava as duas.
+      myID = "CI-" + String(ESP.getChipId(), HEX);
+      myID.toUpperCase();
   }
 
   mesh.init(MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT);
@@ -338,6 +425,9 @@ void setup() {
 
   userScheduler.addTask(tarefaChecagem);
   tarefaChecagem.enable();
+
+  userScheduler.addTask(tarefaPedirHora);
+  tarefaPedirHora.enable();
 }
 
 void loop() {

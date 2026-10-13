@@ -22,6 +22,7 @@ public:
     void send_data(QJsonObject jsonCommand);
 
     Q_INVOKABLE void sinc_esp_data();
+    Q_INVOKABLE void send_time();
     Q_INVOKABLE void send_command_status(QString idEsp, QString status);
     Q_INVOKABLE void send_command_temp(QString idEsp, QString temperatura);
     Q_INVOKABLE void requireEspsId();
@@ -40,7 +41,10 @@ private slots:
 private:
     QSerialPort *serial;
 
+    QJsonObject build_time_command() const;
+
     QTimer *timerFila;
+    qint64 ultimoEnvioHora = 0;
     QQueue<QJsonObject> filaDeMensagens;
 };
 

@@ -60,6 +60,24 @@ Item {
                 "agendamentos": "[]"
             })
         }
+
+        // Estado real informado pelo nó depois de executar um comando.
+        function onStatusUpdated(idEsp, status, temp) {
+            for (var i = 0; i < modeloLista.count; i++) {
+                if (modeloLista.get(i).name === idEsp) {
+                    modeloLista.setProperty(i, "status", status)
+                    modeloLista.setProperty(i, "targetTemp", temp.toString())
+                    return
+                }
+            }
+            modeloLista.append({
+                "name": idEsp,
+                "status": status,
+                "targetTemp": temp.toString(),
+                "temAgendamento": false,
+                "agendamentos": "[]"
+            })
+        }
     }
 
     // ==========================================
@@ -483,6 +501,15 @@ Item {
             radius: 12
             border.color: model.temAgendamento ? "#3b82f6" : "#e2e8f0"
             border.width: model.temAgendamento ? 2 : 1
+
+            // Cada clique em +/− só atualiza a tela; o IR é disparado uma vez,
+            // com o valor final, 600 ms depois do último clique.
+            Timer {
+                id: debounceTemp
+                interval: 600
+                repeat: false
+                onTriggered: { if (typeof sendData !== "undefined") sendData.send_command_temp(model.name, model.targetTemp) }
+            }
             Rectangle { anchors.fill: parent; anchors.margins: -1; color: "transparent"; border.color: "#08000000"; radius: 13; z: -1 }
             RowLayout {
                 anchors.fill: parent
@@ -543,7 +570,7 @@ Item {
                             text: "−"; font.pixelSize: 18; Layout.preferredWidth: 35; Layout.fillHeight: true
                             contentItem: Text { text: parent.text; font: parent.font; color: "#64748b"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             background: Item {}
-                            onClicked: { let tempAtual = parseInt(model.targetTemp); if (tempAtual > 16) { let novaTemp = tempAtual - 1; modeloLista.setProperty(index, "targetTemp", novaTemp.toString()); if (typeof sendData !== "undefined") sendData.send_command_temp(model.name, novaTemp.toString()) } }
+                            onClicked: { let tempAtual = parseInt(model.targetTemp); if (tempAtual > 16) { let novaTemp = tempAtual - 1; modeloLista.setProperty(index, "targetTemp", novaTemp.toString()); debounceTemp.restart() } }
                         }
                         Text {
                             text: model.targetTemp + "°"
@@ -555,7 +582,7 @@ Item {
                             text: "+"; font.pixelSize: 18; Layout.preferredWidth: 35; Layout.fillHeight: true
                             contentItem: Text { text: parent.text; font: parent.font; color: "#64748b"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             background: Item {}
-                            onClicked: { let tempAtual = parseInt(model.targetTemp); if (tempAtual < 30) { let novaTemp = tempAtual + 1; modeloLista.setProperty(index, "targetTemp", novaTemp.toString()); if (typeof sendData !== "undefined") sendData.send_command_temp(model.name, novaTemp.toString()) } }
+                            onClicked: { let tempAtual = parseInt(model.targetTemp); if (tempAtual < 30) { let novaTemp = tempAtual + 1; modeloLista.setProperty(index, "targetTemp", novaTemp.toString()); debounceTemp.restart() } }
                         }
                     }
                 }
